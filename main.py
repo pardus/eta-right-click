@@ -6,7 +6,7 @@ from gi.repository import GLib
 
 from evdev import UInput, ecodes as e
 
-sensitive = 1.5
+sensitive = 0.7
 
 capabilities = {
     e.EV_KEY : (e.BTN_LEFT, e.BTN_RIGHT),
@@ -16,23 +16,31 @@ ui = UInput(capabilities)
 
 devices = []
 for f in os.listdir("/dev/input"):
-    fd = open("/dev/input/event2", "rb")
+    if not f.startswith("event"):
+        print(f)
+        continue
+    fd = open("/dev/input/" +f, "rb")
     dev = libevdev.Device(fd)
-    if dev.has(libevdev.EV_KEY.BTN_LEFT):
+    if True or dev.has(libevdev.EV_KEY.BTN_LEFT):
         devices.append(dev)
-        break
+        
+    else:
+        print(dev)
 
 block = False
 ctime = time.time()
+btime = time.time()
 left_click_lock = False
 
 def handle_right_click():
     global left_click_lock
     if not block:
+        print(time.time() - ctime , sensitive * 1000)
         if time.time() - ctime < sensitive:
             return
         left_click_lock = True
-
+        print(block, left_click_lock)
+    
 def do_left_click():
     global left_click_lock
     ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
@@ -45,10 +53,12 @@ def do_left_click():
 
 @asynchronous
 def listen_device(dev):
-    global block, ctime
+    global block, ctime, btime
     for e in dev.events():
-        ctime = time.time()
-        if e.matches(libevdev.EV_KEY.BTN_LEFT):
+        if e.matches(libevdev.EV_KEY.BTN_LEFT) or e.matches(libevdev.EV_KEY.BTN_TOUCH):
+            ctime = time.time()
+            print(e)
+            btime = time.time()
             if e.value == 1:
                 block = False
                 GLib.timeout_add(sensitive*1000,handle_right_click)
@@ -56,7 +66,13 @@ def listen_device(dev):
                 block = True
                 if left_click_lock:
                     do_left_click()
-        if e.matches(libevdev.EV_ABS):
+
+        print(e,time.time() - btime, time.time() - ctime)
+        if e.matches(libevdev.EV_ABS.ABS_X) or e.matches(libevdev.EV_ABS.ABS_Y):
+            if time.time() - btime < 100:
+                continue
+            print(e)
+            ctime = time.time()
             block = True
 
 for dev in devices:
