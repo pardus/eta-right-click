@@ -50,11 +50,13 @@ def handle_right_click():
 # sağ tık yap
 def do_left_click():
     global left_click_lock
+    time.sleep(0.3)
     ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
     ui.syn()
     time.sleep(sensitive / 10)
     ui.write(e.EV_KEY, e.BTN_RIGHT, 0)
     ui.syn()
+    print('click')
     left_click_lock = False
 
 
@@ -66,18 +68,18 @@ def listen_device(dev):
         # tuşa basma eventi kontrolü
         if e.matches(libevdev.EV_KEY.BTN_LEFT) or e.matches(libevdev.EV_KEY.BTN_TOUCH):
             ctime = time.time()
-            print(e)
+            print(e, left_click_lock, block)
             btime = time.time()
             if e.value == 1:
                 block = False
                 # sassaslık kadar süreden sonra çalıştırmak için
                 GLib.timeout_add(sensitive*1000,handle_right_click)
             else:
-                block = True
                 if left_click_lock:
                     do_left_click()
 
-        print(e,time.time() - btime, time.time() - ctime)
+        if left_click_lock:
+            continue
         # hareket ettirilirse sağ tuş eventi iptal edilmeli
         if e.matches(libevdev.EV_ABS.ABS_X) or e.matches(libevdev.EV_ABS.ABS_Y):
             # basma zamanının 100ms kadarlık süresine kadarki hareket eventleri görmezden gelinir.
