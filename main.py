@@ -1,3 +1,4 @@
+#!/usr/bin/env
 import fcntl, os, libevdev
 import time
 from util import *
@@ -5,6 +6,11 @@ from util import *
 from gi.repository import GLib
 
 from evdev import UInput, ecodes as e
+
+import sys
+if "--debug" not in sys.argv:
+    def print(*args, **kwargs):
+        pass
 
 sensitive = 0.1 # cihaza göre ayarlanması gereken hassaslık
 timeout = 700 # uzun basma bekleme süresi
