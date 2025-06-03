@@ -1,0 +1,16 @@
+Source: eta-right-click
+Section: utils
+Priority: optional
+Maintainer: Ali Rıza KESKİN <ali.riza.keskin@pardus.org.tr>
+Build-Depends: make
+Standards-Version: 4.3.0
+Homepage: https://pardus.org.tr
+
+Package: eta-right-click
+Architecture: all
+Depends: ${misc:Depends},
+         libc6,
+         python3-evdev,
+         python3-libevdev
+Description: Long press right click event emulator.
+ Emulate right click when long press.
