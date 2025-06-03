@@ -45,7 +45,7 @@ def handle_right_click():
         if time.time() - ctime < sensitive:
             return
         left_click_lock = True
-        print(block, left_click_lock)
+        print("lock")
 
 # sağ tık yap
 def do_left_click():
@@ -60,35 +60,71 @@ def do_left_click():
     left_click_lock = False
 
 
+
+num_of_touch = 0
+move_count = 0
+
+def do_left_click_event(e):
+    global block, ctime, btime, num_of_touch
+    print("left-click", btime, move_count)
+    ctime = time.time()
+    print(e, left_click_lock, block)
+    btime = time.time()
+    if e.value == 1:
+        # sassaslık kadar süreden sonra çalıştırmak için
+        GLib.timeout_add(sensitive*1000,handle_right_click)
+    else:
+        if left_click_lock:
+            do_left_click()
+
+def do_cancel_event(e):
+    global block, ctime, btime, num_of_touch, move_count
+    # basma zamanının 100ms kadarlık süresine kadarki hareket eventleri görmezden gelinir.
+    print("cancel", btime, move_count)
+    if time.time() - btime < sensitive:
+        return True
+    ctime = time.time()
+    block = True
+    return True
+
 @asynchronous
 def listen_device(dev):
-    global block, ctime, btime
+    global block, ctime, btime, num_of_touch, move_count
     # Bu kısımda eventler okunur
     for e in dev.events():
-        # tuşa basma eventi kontrolü
-        if e.matches(libevdev.EV_KEY.BTN_LEFT) or e.matches(libevdev.EV_KEY.BTN_TOUCH):
-            ctime = time.time()
-            print(e, left_click_lock, block)
-            btime = time.time()
-            if e.value == 1:
-                block = False
-                # sassaslık kadar süreden sonra çalıştırmak için
-                GLib.timeout_add(sensitive*1000,handle_right_click)
+        print("diff", time.time() - btime)
+        if e.matches(libevdev.EV_ABS.ABS_MT_TRACKING_ID):
+            if e.value == -1:
+                num_of_touch -= 1
             else:
-                if left_click_lock:
-                    do_left_click()
-
+                num_of_touch += 1
+            ev = e
+            if num_of_touch == 0:
+                ev.value = 0
+                move_count = 0
+                do_left_click_event(ev)
+            elif num_of_touch == 1:
+                ev.value = 1
+                do_left_click_event(ev)
+            else:
+                if do_cancel_event(e):
+                    continue
+        # tuşa basma eventi kontrolü
+        elif e.matches(libevdev.EV_KEY.BTN_LEFT) or e.matches(libevdev.EV_KEY.BTN_TOUCH):
+            do_left_click_event(e)
         if left_click_lock:
             continue
-        # hareket ettirilirse sağ tuş eventi iptal edilmeli
-        if e.matches(libevdev.EV_ABS.ABS_X) or e.matches(libevdev.EV_ABS.ABS_Y):
-            # basma zamanının 100ms kadarlık süresine kadarki hareket eventleri görmezden gelinir.
-            if time.time() - btime < 100:
+        # multi touch hareket eventi
+        if e.matches(libevdev.EV_ABS.ABS_MT_POSITION_X):
+            print("touch:",num_of_touch, "count:", move_count)
+            if num_of_touch == 1:
+                move_count += 1
+            if do_cancel_event(e):
                 continue
-            print(e)
-            ctime = time.time()
-            block = True
-
+        # hareket ettirilirse sağ tuş eventi iptal edilmeli
+        elif e.matches(libevdev.EV_ABS.ABS_X) or e.matches(libevdev.EV_ABS.ABS_Y):
+            if do_cancel_event(e):
+                continue
 
 # dinlemeye başla
 for dev in devices:
