@@ -19,16 +19,17 @@ devices = []
 for f in os.listdir("/dev/input"):
     # event olmayanları es geç
     if not f.startswith("event"):
-        print(f)
+        print("Available:", f)
         continue
     # device classı oluştur ve ekle
     fd = open("/dev/input/" +f, "rb")
     dev = libevdev.Device(fd)
     # burda uygun olup olmama kontrolü yapılır
-    if True or dev.has(libevdev.EV_KEY.BTN_LEFT):
+    if dev.has(libevdev.EV_KEY.BTN_TOUCH) or dev.has(libevdev.EV_ABS.ABS_X) or dev.has(libevdev.EV_ABS.ABS_MT_POSITION_X):
+        print("Track:", f)
         devices.append(dev)
     else:
-        print(dev)
+        print("ignore", f)
 
 # global değişkenler
 block = False # basma eventi engellendi mi
@@ -92,7 +93,11 @@ def listen_device(dev):
     global block, ctime, btime, num_of_touch, move_count
     # Bu kısımda eventler okunur
     for e in dev.events():
-        print("diff", time.time() - btime)
+        print("diff", time.time() - btime, e, dev.fd.name)
+        if not os.path.exists(dev.fd.name):
+            print("Wait for enable")
+            time.sleep(5)
+            continue
         if e.matches(libevdev.EV_ABS.ABS_MT_TRACKING_ID):
             if e.value == -1:
                 num_of_touch -= 1
