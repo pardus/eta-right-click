@@ -6,7 +6,8 @@ from gi.repository import GLib
 
 from evdev import UInput, ecodes as e
 
-sensitive = 1.5
+sensitive = 1.5 # cihaza göre ayarlanması gereken hassaslık
+timeout = 700 # uzun basma bekleme süresi
 
 capabilities = {
     e.EV_KEY : (e.BTN_LEFT, e.BTN_RIGHT),
@@ -42,8 +43,8 @@ left_click_lock = False # sağ tık eventi gelsin mi
 def handle_right_click():
     global left_click_lock
     if not block:
-        print(time.time() - ctime , sensitive * 1000)
-        if time.time() - ctime < sensitive:
+        print(time.time() - ctime)
+        if time.time() - ctime < timeout/1000:
             return
         left_click_lock = True
         print("lock")
@@ -51,7 +52,7 @@ def handle_right_click():
 # sağ tık yap
 def do_left_click():
     global left_click_lock
-    time.sleep(0.3)
+    time.sleep(sensitive / 10)
     ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
     ui.syn()
     time.sleep(sensitive / 10)
@@ -67,13 +68,12 @@ move_count = 0
 
 def do_left_click_event(e):
     global block, ctime, btime, num_of_touch
-    print("left-click", btime, move_count)
+    print("left-click", btime, move_count, e, left_click_lock, block)
     ctime = time.time()
-    print(e, left_click_lock, block)
     btime = time.time()
     if e.value == 1:
-        # sassaslık kadar süreden sonra çalıştırmak için
-        GLib.timeout_add(sensitive*1000,handle_right_click)
+        # uzun basma kadar süreden sonra çalıştırmak için
+        GLib.timeout_add(timeout,handle_right_click)
     else:
         if left_click_lock:
             do_left_click()
@@ -93,7 +93,7 @@ def listen_device(dev):
     global block, ctime, btime, num_of_touch, move_count
     # Bu kısımda eventler okunur
     for e in dev.events():
-        print("diff", time.time() - btime, e, dev.fd.name)
+        //print("diff", time.time() - btime, e, dev.fd.name)
         if not os.path.exists(dev.fd.name):
             print("Wait for enable")
             time.sleep(5)
