@@ -6,7 +6,7 @@ from gi.repository import GLib
 
 from evdev import UInput, ecodes as e
 
-sensitive = 0.7
+sensitive = 1.5
 
 capabilities = {
     e.EV_KEY : (e.BTN_LEFT, e.BTN_RIGHT),
