@@ -1,11 +1,11 @@
 #!/usr/bin/env
-import fcntl, os, libevdev
+import fcntl, os
 import time
 from util import *
 
 from gi.repository import GLib
 
-from evdev import UInput, ecodes as e
+from evdev import UInput, InputDevice, ecodes as e
 
 import sys
 if "--debug" not in sys.argv:
@@ -29,10 +29,13 @@ for f in os.listdir("/dev/input"):
         print("Available:", f)
         continue
     # device classı oluştur ve ekle
-    fd = open("/dev/input/" +f, "rb")
-    dev = libevdev.Device(fd)
+    fd = "/dev/input/" +f
+    dev = InputDevice(fd)
+    cap = dev.capabilities()
     # burda uygun olup olmama kontrolü yapılır
-    if dev.has(libevdev.EV_KEY.BTN_TOUCH) or dev.has(libevdev.EV_ABS.ABS_X) or dev.has(libevdev.EV_ABS.ABS_MT_POSITION_X):
+    print(cap)
+    if (e.EV_KEY in cap and e.BTN_TOUCH in cap[e.EV_KEY]) \
+        or (e.EV_ABS in cap and (e.ABS_X in cap[e.EV_ABS] or e.ABS_MT_POSITION_X in cap[e.EV_ABS])):
         print("Track:", f)
         devices.append(dev)
     else:
@@ -76,28 +79,28 @@ abs_cur_x = -1
 abs_cur_y = -1
 
 pressed = False
-def do_left_click_event(e):
+def do_left_click_event(ev):
     global block, ctime, btime, num_of_touch, pressed, abs_cur
     ctime = time.time()
     btime = time.time()
-    if e.value == 1:
+    if ev.value == 1:
         # birden çok basma eventini engelle
         if pressed:
             return
         # uzun basma kadar süreden sonra çalıştırmak için
         pressed = True
-        print("press", btime, move_count, e, left_click_lock, block)
+        print("press", btime, move_count, ev, left_click_lock, block)
         GLib.timeout_add(timeout,handle_right_click)
     else:
         pressed = False
         block = False
         abs_cur_x = -1
         abs_cur_y = -1
-        print("release", btime, move_count, e, left_click_lock, block)
+        print("release", btime, move_count, ev, left_click_lock, block)
         if left_click_lock and not block:
             do_left_click()
 
-def do_cancel_event(e, is_x):
+def do_cancel_event(ev, is_x):
     global block, ctime, btime, num_of_touch, move_count
     # basma zamanının 100ms kadarlık süresine kadarki hareket eventleri görmezden gelinir.
     if time.time() - btime < sensitive:
@@ -109,10 +112,10 @@ def do_cancel_event(e, is_x):
         ratio = 1
         diff = 0
     elif is_x:
-        diff = abs(e.value - abs_cur_x)
+        diff = abs(ev.value - abs_cur_x)
         ratio = diff /abs_max_x
     else:
-        diff = abs(e.value - abs_cur_y)
+        diff = abs(ev.value - abs_cur_y)
         ratio = diff / abs_max_y
     if ratio < 0.05:
         print("ignore-diff", diff, ratio)
@@ -126,9 +129,9 @@ def do_cancel_event(e, is_x):
 def listen_device(dev):
     global block, ctime, btime, num_of_touch, move_count, abs_cur_x, abs_cur_y
     # Bu kısımda eventler okunur
-    for e in dev.events():
-        print("event:", e,
-              "device:", dev.fd.name,
+    for ev in dev.read_loop():
+        print("event:", ev,
+              "device:", dev.fd,
               "press:", pressed,
               "block:", block,
               "lock:", left_click_lock,
@@ -137,53 +140,54 @@ def listen_device(dev):
               "abs_cur_x:", abs_cur_x,
               "abs_cur_y:", abs_cur_y
         )
-        if not os.path.exists(dev.fd.name):
+        if not os.path.exists(dev.fd):
             print("Wait for enable")
             time.sleep(5)
             continue
         # multi touch parmak sayma
-        if e.matches(libevdev.EV_ABS.ABS_MT_TRACKING_ID):
-            if e.value == -1:
+        if ev.code == e.ABS_MT_TRACKING_ID:
+            if ev.value == -1:
                 num_of_touch -= 1
             else:
                 num_of_touch += 1
 
         # hareket ettirilirse sağ tuş eventi iptal edilmeli
-        if e.matches(libevdev.EV_ABS.ABS_X) or e.matches(libevdev.EV_ABS.ABS_Y):
+        if ev.code == e.ABS_X or ev.code == e.ABS_Y:
             if abs_cur_x < 0:
-                abs_cur_x = e.value
+                abs_cur_x = ev.value
             if abs_cur_y < 0:
-                abs_cur_y = e.value
-            do_cancel_event(e, e.matches(libevdev.EV_ABS.ABS_X))
+                abs_cur_y = ev.value
+            do_cancel_event(ev, ev.code == e.ABS_X)
         # multi touch hareket eventi
-        elif e.matches(libevdev.EV_ABS.ABS_MT_POSITION_X) or e.matches(libevdev.EV_ABS.ABS_MT_POSITION_Y):
+        elif ev.code == e.ABS_MT_POSITION_X or ev.code == e.ABS_MT_POSITION_Y:
             if abs_cur_x < 0:
-                abs_cur_x = e.value
+                abs_cur_x = ev.value
             if abs_cur_y < 0:
-                abs_cur_y = e.value
+                abs_cur_y = ev.value
             if num_of_touch == 1:
                 move_count += 1
-            do_cancel_event(e, e.matches(libevdev.EV_ABS.ABS_MT_POSITION_X))
+            do_cancel_event(ev, ev.code == e.ABS_MT_POSITION_X)
 
         # tuşa basma eventi kontrolü
-        if e.matches(libevdev.EV_KEY.BTN_LEFT) or e.matches(libevdev.EV_KEY.BTN_TOUCH):
-            do_left_click_event(e)
+        if ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH:
+            do_left_click_event(ev)
         # multi touch eventi kontrolü
-        elif e.matches(libevdev.EV_ABS.ABS_MT_TRACKING_ID):
+        elif ev.code == e.ABS_MT_TRACKING_ID:
             if num_of_touch == 0:
-                e.value = 0
+                ev.value = 0
                 move_count = 0
-                do_left_click_event(e)
+                do_left_click_event(ev)
             elif num_of_touch == 1:
-                e.value = 1
-                do_left_click_event(e)
+                ev.value = 1
+                do_left_click_event(ev)
             else:
-                do_cancel_event(e, None)
+                do_cancel_event(ev, None)
 
 # dinlemeye başla
 for dev in devices:
-    abs_max_x = dev.absinfo[libevdev.EV_ABS.ABS_X].maximum
-    abs_max_y = dev.absinfo[libevdev.EV_ABS.ABS_Y].maximum
+    print(dev.absinfo)
+    abs_max_x = dev.absinfo(e.ABS_X).max
+    abs_max_y = dev.absinfo(e.ABS_Y).max
     listen_device(dev)
 # glib loopu kapanmayı engeller ve timeout_add çalışmasını sağlar.
 main = GLib.MainLoop()
