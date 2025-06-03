@@ -96,7 +96,9 @@ def do_cancel_event(e, is_x):
         return
     # kaydırma miktarını ölç ve yetersizse görmezden gel
     if is_x == None:
-        pass
+        # zorla engellemek için
+        ratio = 1
+        diff = 0
     elif is_x:
         diff = abs(e.value - abs_cur_x)
         ratio = diff /abs_max_x
@@ -106,7 +108,7 @@ def do_cancel_event(e, is_x):
     if ratio < 0.05:
         print("ignore-diff", diff, ratio)
         return
-    print("cancel", btime, move_count)
+    print("cancel", btime, move_count, diff, ratio)
     ctime = time.time()
     block = True
 
