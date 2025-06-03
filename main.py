@@ -80,7 +80,10 @@ def do_left_click_event(e):
     global block, ctime, btime, num_of_touch, pressed, abs_cur
     ctime = time.time()
     btime = time.time()
-    if e.value == 1 and not pressed:
+    if e.value == 1:
+        # birden çok basma eventini engelle
+        if pressed:
+            return
         # uzun basma kadar süreden sonra çalıştırmak için
         pressed = True
         print("press", btime, move_count, e, left_click_lock, block)
