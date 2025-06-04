@@ -34,7 +34,142 @@ capabilities = {
 
 ui = UInput(capabilities)
 
-devices = []
+
+# sağ tık yap
+def do_right_click():
+    time.sleep(0.3)
+    ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
+    ui.syn()
+    time.sleep(0.3)
+    ui.write(e.EV_KEY, e.BTN_RIGHT, 0)
+    ui.syn()
+    print('click')
+
+
+class Device:
+
+    def __init__(self, dev):
+        self.dev = dev
+        self.pressed = False
+        self.num_of_touch = 0
+        self.move_count = 0
+        self.cur_x = dev.absinfo(e.ABS_X).value
+        self.cur_y = dev.absinfo(e.ABS_Y).value
+        self.ctime = time.time()
+        self.btime = time.time()
+        self.left_click_lock = False
+        self.block = False
+
+    def dump(self, action="dump"):
+        print("========== {} ==========".format(time.time()))
+        print("Action:", action)
+        print("Pressed:", self.pressed)
+        print("Num of Touch:", self.num_of_touch)
+        print("Move count:", self.move_count)
+        print("X cursor:", self.cur_x)
+        print("Y cursor:", self.cur_y)
+        print("Current time:", self.ctime)
+        print("Button time:", self.btime)
+        print("Lock:", self.left_click_lock)
+        print("Block:", self.block)
+
+
+    def do_left_click_event(self):
+        self.ctime = time.time()
+        self.btime = time.time()
+        self.cur_x = self.dev.absinfo(e.ABS_X).value
+        self.cur_y = self.dev.absinfo(e.ABS_Y).value
+        # zamana bak ve sağ tık yapılacak mı karar ver
+        def handle_right_click():
+            if self.pressed and not self.block:
+                self.left_click_lock = True
+                self.dump("lock")
+        if self.ev.value == 1:
+            # birden çok basma eventini engelle
+            if self.pressed:
+                return
+            # uzun basma kadar süreden sonra çalıştırmak için
+            self.pressed = True
+            self.dump("press")
+            GLib.timeout_add(timeout,handle_right_click)
+        else:
+            self.pressed = False
+            self.block = False
+            self.dump("release")
+            # kilitlendiyse ve engellenmediyse sağ tıkla
+            if self.left_click_lock and not self.block:
+                do_right_click()
+                self.left_click_lock = False
+                self.dump("right-click")
+
+
+    def do_cancel_event(self, is_x):
+        if self.block:
+            return
+        # basma zamanının 100ms kadarlık süresine kadarki hareket eventleri görmezden gelinir.
+        if time.time() - self.btime < sensitive:
+            self.dump("ignore-time")
+            return
+        # kaydırma miktarını ölç ve yetersizse görmezden gel
+        if is_x == None:
+            # zorla engellemek için
+            ratio = 1
+            diff = 0
+        elif is_x:
+            diff = abs(self.dev.absinfo(e.ABS_X).value - self.cur_x)
+            ratio = diff / self.dev.absinfo(e.ABS_X).max
+        else:
+            diff = abs(self.dev.absinfo(e.ABS_Y).value - self.cur_y)
+            ratio = diff / self.dev.absinfo(e.ABS_Y).max
+        if ratio < treshold:
+            self.dump("ignore-treshold")
+            return
+        self.dump("cancel")
+        self.ctime = time.time()
+        self.block = True
+
+
+    @asynchronous
+    def listen(self):
+        # Bu kısımda eventler okunur
+        for ev in dev.read_loop():
+            self.ev = ev
+            if not os.path.exists(self.dev.fd):
+                print("Wait for enable")
+                time.sleep(5)
+                continue
+            # multi touch parmak sayma
+            if ev.code == e.ABS_MT_TRACKING_ID:
+                if ev.value == -1:
+                    self.num_of_touch -= 1
+                else:
+                    self.num_of_touch += 1
+
+            # hareket ettirilirse sağ tuş eventi iptal edilmeli
+            if ev.code == e.ABS_X or ev.code == e.ABS_Y:
+                self.do_cancel_event(ev.code == e.ABS_X)
+            # multi touch hareket eventi
+            elif ev.code == e.ABS_MT_POSITION_X or ev.code == e.ABS_MT_POSITION_Y:
+                if self.num_of_touch == 1:
+                     self.move_count += 1
+                self.do_cancel_event(ev.code == e.ABS_MT_POSITION_X)
+
+            # tuşa basma eventi kontrolü
+            if ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH:
+                self.do_left_click_event()
+            # multi touch eventi kontrolü
+            elif ev.code == e.ABS_MT_TRACKING_ID:
+                if self.num_of_touch == 0:
+                    self.ev.value = 0
+                    self.move_count = 0
+                    self.do_left_click_event()
+                elif self.num_of_touch == 1:
+                    self.ev.value = 1
+                    self.do_left_click_event()
+                else:
+                    self.do_cancel_event(None)
+
+
 # Device listesi oluşturmak için dizini taradık
 for f in os.listdir("/dev/input"):
     # event olmayanları es geç
@@ -50,144 +185,9 @@ for f in os.listdir("/dev/input"):
     if (e.EV_KEY in cap and e.BTN_TOUCH in cap[e.EV_KEY]) \
         or (e.EV_ABS in cap and (e.ABS_X in cap[e.EV_ABS] or e.ABS_MT_POSITION_X in cap[e.EV_ABS])):
         print("Track:", f)
-        devices.append(dev)
-    else:
-        print("ignore", f)
+        d = Device(dev)
+        d.listen()
 
-# global değişkenler
-block = False # basma eventi engellendi mi
-ctime = time.time() # en son event zamanı
-btime = time.time() # tuşa basma zamanı
-left_click_lock = False # sağ tık eventi gelsin mi
-
-
-# zamana bak ve sağ tık yapılacak mı karar ver
-def handle_right_click():
-    global left_click_lock, block
-    if pressed and not block:
-        print("lock", time.time() - ctime)
-        left_click_lock = True
-
-# sağ tık yap
-def do_left_click():
-    global left_click_lock
-    time.sleep(0.3)
-    ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
-    ui.syn()
-    time.sleep(0.3)
-    ui.write(e.EV_KEY, e.BTN_RIGHT, 0)
-    ui.syn()
-    print('click')
-    left_click_lock = False
-
-
-
-num_of_touch = 0
-move_count = 0
-cur_x = 0
-cur_y = 0
-
-pressed = False
-def do_left_click_event(ev):
-    global block, ctime, btime, num_of_touch, pressed, cur_x, cur_y
-    ctime = time.time()
-    btime = time.time()
-    cur_x = dev.absinfo(e.ABS_X).value
-    cur_y = dev.absinfo(e.ABS_Y).value
-    if ev.value == 1:
-        # birden çok basma eventini engelle
-        if pressed:
-            return
-        # uzun basma kadar süreden sonra çalıştırmak için
-        pressed = True
-        print("press", btime, move_count, ev, left_click_lock, block)
-        GLib.timeout_add(timeout,handle_right_click)
-    else:
-        pressed = False
-        block = False
-        print("release", btime, move_count, ev, left_click_lock, block)
-        if left_click_lock and not block:
-            do_left_click()
-
-def do_cancel_event(dev, ev, is_x):
-    global block, ctime, btime, num_of_touch, move_count
-    # basma zamanının 100ms kadarlık süresine kadarki hareket eventleri görmezden gelinir.
-    if time.time() - btime < sensitive:
-        print("ignore-time", sensitive - (time.time() - btime))
-        return
-    # kaydırma miktarını ölç ve yetersizse görmezden gel
-    if is_x == None:
-        # zorla engellemek için
-        ratio = 1
-        diff = 0
-    elif is_x:
-        diff = abs(dev.absinfo(e.ABS_X).value - cur_x)
-        ratio = diff / dev.absinfo(e.ABS_X).max
-    else:
-        diff = abs(dev.absinfo(e.ABS_Y).value - cur_y)
-        ratio = diff / dev.absinfo(e.ABS_Y).max
-    if ratio < treshold:
-        print("ignore-diff", diff, ratio)
-        return
-    print("cancel", btime, move_count, diff, ratio)
-    ctime = time.time()
-    block = True
-
-
-@asynchronous
-def listen_device(dev):
-    global block, ctime, btime, num_of_touch, move_count
-    # Bu kısımda eventler okunur
-    for ev in dev.read_loop():
-        print("event:", ev,
-              "device:", dev.fd,
-              "press:", pressed,
-              "block:", block,
-              "lock:", left_click_lock,
-              "touch:", num_of_touch,
-              "count:", move_count,
-              "abs_cur_x:", dev.absinfo(e.ABS_X).value,
-              "abs_cur_y:", dev.absinfo(e.ABS_Y).value
-        )
-        if not os.path.exists(dev.fd):
-            print("Wait for enable")
-            time.sleep(5)
-            continue
-        # multi touch parmak sayma
-        if ev.code == e.ABS_MT_TRACKING_ID:
-            if ev.value == -1:
-                num_of_touch -= 1
-            else:
-                num_of_touch += 1
-
-        # hareket ettirilirse sağ tuş eventi iptal edilmeli
-        if ev.code == e.ABS_X or ev.code == e.ABS_Y:
-            do_cancel_event(dev, ev, ev.code == e.ABS_X)
-        # multi touch hareket eventi
-        elif ev.code == e.ABS_MT_POSITION_X or ev.code == e.ABS_MT_POSITION_Y:
-            if num_of_touch == 1:
-                move_count += 1
-            do_cancel_event(dev, ev, ev.code == e.ABS_MT_POSITION_X)
-
-        # tuşa basma eventi kontrolü
-        if ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH:
-            do_left_click_event(ev)
-        # multi touch eventi kontrolü
-        elif ev.code == e.ABS_MT_TRACKING_ID:
-            if num_of_touch == 0:
-                ev.value = 0
-                move_count = 0
-                do_left_click_event(ev)
-            elif num_of_touch == 1:
-                ev.value = 1
-                do_left_click_event(ev)
-            else:
-                do_cancel_event(dev, ev, None)
-
-# dinlemeye başla
-for dev in devices:
-    print(dev.absinfo)
-    listen_device(dev)
 # glib loopu kapanmayı engeller ve timeout_add çalışmasını sağlar.
 main = GLib.MainLoop()
 main.run()
