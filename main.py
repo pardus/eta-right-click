@@ -53,6 +53,7 @@ class Device:
         self.pressed = False
         self.num_of_touch = 0
         self.move_count = 0
+        self.value = 0
         self.cur_x = dev.absinfo(e.ABS_X).value
         self.cur_y = dev.absinfo(e.ABS_Y).value
         self.ctime = time.time()
@@ -63,6 +64,7 @@ class Device:
     def dump(self, action="dump"):
         print("========== {} ==========".format(time.time()))
         print("Action:", action)
+        print("EV:", self.ev.code)
         print("Pressed:", self.pressed)
         print("Num of Touch:", self.num_of_touch)
         print("Move count:", self.move_count)
@@ -103,8 +105,8 @@ class Device:
                 self.dump("right-click")
 
 
-    def do_cancel_event(self, is_x):
-        if self.block:
+    def do_cancel_event(self, is_x, value):
+        if self.block or self.left_click_lock:
             return
         # basma zamanının 100ms kadarlık süresine kadarki hareket eventleri görmezden gelinir.
         if time.time() - self.btime < sensitive:
@@ -116,15 +118,18 @@ class Device:
             ratio = 1
             diff = 0
         elif is_x:
-            diff = abs(self.dev.absinfo(e.ABS_X).value - self.cur_x)
+            diff = abs(value - self.cur_x)
             ratio = diff / self.dev.absinfo(e.ABS_X).max
         else:
-            diff = abs(self.dev.absinfo(e.ABS_Y).value - self.cur_y)
+            diff = abs(value - self.cur_y)
             ratio = diff / self.dev.absinfo(e.ABS_Y).max
         if ratio < treshold:
             self.dump("ignore-treshold")
             return
         self.dump("cancel")
+        print("Ratio:", ratio)
+        print("Diff:", diff)
+        print(self.ev.value , self.cur_y, self.cur_x)
         self.ctime = time.time()
         self.block = True
 
@@ -147,12 +152,12 @@ class Device:
 
             # hareket ettirilirse sağ tuş eventi iptal edilmeli
             if ev.code == e.ABS_X or ev.code == e.ABS_Y:
-                self.do_cancel_event(ev.code == e.ABS_X)
+                self.do_cancel_event(ev.code == e.ABS_X, self.dev.absinfo(ev.code).value)
             # multi touch hareket eventi
             elif ev.code == e.ABS_MT_POSITION_X or ev.code == e.ABS_MT_POSITION_Y:
                 if self.num_of_touch == 1:
                      self.move_count += 1
-                self.do_cancel_event(ev.code == e.ABS_MT_POSITION_X)
+                self.do_cancel_event(ev.code == e.ABS_MT_POSITION_X, ev.value)
 
             # tuşa basma eventi kontrolü
             if ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH:
@@ -167,7 +172,7 @@ class Device:
                     self.ev.value = 1
                     self.do_left_click_event()
                 else:
-                    self.do_cancel_event(None)
+                    self.do_cancel_event(None, -1 )
 
 
 # Device listesi oluşturmak için dizini taradık
