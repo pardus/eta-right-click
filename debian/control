@@ -10,7 +10,6 @@ Package: eta-right-click
 Architecture: all
 Depends: ${misc:Depends},
          libc6,
-         python3-evdev,
-         python3-libevdev
+         python3-evdev
 Description: Long press right click event emulator.
  Emulate right click when long press.
