@@ -86,6 +86,10 @@ class Device:
             if self.pressed and not self.block:
                 self.left_click_lock = True
                 self.dump("lock")
+            elif self.left_click_lock:
+                do_right_click()
+                self.left_click_lock = False
+                self.dump("right-click")
         if self.ev.value == 1:
             # birden çok basma eventini engelle
             if self.pressed:
@@ -99,10 +103,7 @@ class Device:
             self.block = False
             self.dump("release")
             # kilitlendiyse ve engellenmediyse sağ tıkla
-            if self.left_click_lock and not self.block:
-                do_right_click()
-                self.left_click_lock = False
-                self.dump("right-click")
+            handle_right_click()
 
 
     def do_cancel_event(self, is_x, value):
