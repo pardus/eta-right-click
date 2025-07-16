@@ -1,7 +1,25 @@
 eta-right-click (2.0.0) unshable; urgency=medium
 
-  [ Ali Riza Keskin ]
-  * init
+  [ Ali Riza KESKIN ]
+  * fix path
+  * timeout and sersitive split
+  * fixes
+  * minor move events are ignored
+  * minor fix
+  * disable print for spam service log
+  * block double press event
+  * drop python3-libevdev and just use python3-evdev
 
- -- Aliriza Keskin <aliriza..keskin@pardus.org.tr>  Tue, 03 Jun 2025 09:30:23 +0000
+  [ sulincix ]
+  * add config
+  * change log format and write device context
+  * reduce cancel calculation  and fix multi touch
 
+  [ Ali Riza KESKIN ]
+  * remove unused check move into handle function
+
+  [ sulincix ]
+  * add readme
+  * add license
+
+ -- Fatih Altun <fatih.altun@pardus.org.tr>  Wed, 16 Jul 2025 14:27:02 +0300
