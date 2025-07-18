@@ -20,7 +20,7 @@ The script can be configured by editing the `/etc/pardus/eta-right-click.conf` f
 
 - `sensitive`: Adjusts the sensitivity for touch detection (default: 0.1).
 - `timeout`: Sets the duration to wait for a long press before triggering a right-click (default: 700 ms).
-- `treshold`: Defines the minimum movement ratio to ignore touch events (default: 0.05).
+- `threshold`: Defines the minimum movement ratio to ignore touch events (default: 0.05).
 
 ### Example Configuration File
 
@@ -28,7 +28,7 @@ The script can be configured by editing the `/etc/pardus/eta-right-click.conf` f
 [main]
 sensitive = 0.1
 timeout = 700
-treshold = 0.05
+threshold = 0.05
 ```
 
 ## Running the Script
