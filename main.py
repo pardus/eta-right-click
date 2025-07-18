@@ -60,6 +60,7 @@ class Device:
         self.btime = time.time()
         self.left_click_lock = False
         self.block = False
+        self.id = 0
 
     def dump(self, action="dump"):
         print("========== {} ==========".format(time.time()))
@@ -74,6 +75,7 @@ class Device:
         print("Button time:", self.btime)
         print("Lock:", self.left_click_lock)
         print("Block:", self.block)
+        print("id:", self.id)
 
 
     def do_left_click_event(self):
@@ -82,7 +84,10 @@ class Device:
         self.cur_x = self.dev.absinfo(e.ABS_X).value
         self.cur_y = self.dev.absinfo(e.ABS_Y).value
         # zamana bak ve sağ tık yapılacak mı karar ver
-        def handle_right_click():
+        def handle_right_click(id):
+            if self.id != id:
+                self.dump("ignore-id")
+                return
             if self.pressed and not self.block:
                 self.left_click_lock = True
                 self.dump("lock")
@@ -97,13 +102,14 @@ class Device:
             # uzun basma kadar süreden sonra çalıştırmak için
             self.pressed = True
             self.dump("press")
-            GLib.timeout_add(timeout,handle_right_click)
+            self.id += 1
+            GLib.timeout_add(timeout,handle_right_click, self.id)
         else:
             self.pressed = False
             self.block = False
             self.dump("release")
             # kilitlendiyse ve engellenmediyse sağ tıkla
-            handle_right_click()
+            handle_right_click(self.id)
 
 
     def do_cancel_event(self, is_x, value):
