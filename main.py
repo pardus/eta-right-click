@@ -15,7 +15,7 @@ if "--debug" not in sys.argv:
 
 sensitive = 0.1  # cihaza göre ayarlanması gereken hassaslık
 timeout   = 700  # uzun basma bekleme süresi
-treshold  = 0.05 # görmezden gelinen minimum oran
+threshold = 0.05 # görmezden gelinen minimum oran
 
 config = configparser.ConfigParser()
 config.read("/etc/pardus/eta-right-click.conf")
@@ -23,7 +23,7 @@ config.read("/etc/pardus/eta-right-click.conf")
 try:
     sensitive = float(config["main"]["sensitive"])
     timeout   = float(config["main"]["timeout"])
-    treshold  = float(config["main"]["treshold"])
+    threshold  = float(config["main"]["threshold"])
 except Exception as err:
     log(err)
     sys.exit(1)
@@ -130,8 +130,8 @@ class Device:
         else:
             diff = abs(value - self.cur_y)
             ratio = diff / self.dev.absinfo(e.ABS_Y).max
-        if ratio < treshold:
-            self.dump("ignore-treshold")
+        if ratio < threshold:
+            self.dump("ignore-threshold")
             return
         self.dump("cancel")
         print("Ratio:", ratio)
