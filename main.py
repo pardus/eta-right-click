@@ -95,7 +95,7 @@ class Device:
                 self.left_click_lock = True
                 self.dump("lock")
             elif self.left_click_lock:
-                do_right_click()
+                GLib.idle_add(do_right_click)
                 self.left_click_lock = False
                 self.dump("right-click")
         if self.ev.value == 1:
@@ -223,7 +223,8 @@ def scan_devices():
     # Her 10 saniyede bir yeni aygıt var mı diye tara
     GLib.timeout_add(10*1000, scan_devices)
 
-scan_devices()
+# aygıt taramaya başla (glib loopu içinde)
+GLib.idle_add(scan_devices)
 
 # glib loopu kapanmayı engeller ve timeout_add çalışmasını sağlar.
 main = GLib.MainLoop()
