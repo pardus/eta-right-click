@@ -4,6 +4,8 @@ import time
 from util import *
 import configparser
 
+import traceback
+
 from gi.repository import GLib
 from evdev import UInput, InputDevice, ecodes as e
 import sys
@@ -61,6 +63,7 @@ class Device:
         self.left_click_lock = False
         self.block = False
         self.id = 0
+        self.exit_handler = None
 
     def dump(self, action="dump"):
         print("========== {} ==========".format(time.time()))
@@ -143,13 +146,8 @@ class Device:
 
     @asynchronous
     def listen(self):
-        # Bu kısımda eventler okunur
-        for ev in dev.read_loop():
+        def event_action(ev):
             self.ev = ev
-            if not os.path.exists(self.dev.fd):
-                print("Wait for enable")
-                time.sleep(5)
-                continue
             # multi touch parmak sayma
             if ev.code == e.ABS_MT_TRACKING_ID:
                 if ev.value == -1:
@@ -180,25 +178,52 @@ class Device:
                     self.do_left_click_event()
                 else:
                     self.do_cancel_event(None, -1 )
+        # Bu kısımda eventler okunur
+        try:
+            for ev in self.dev.read_loop():
+                event_action(ev)
+        except:
+            print("Device event read failed {}".format(traceback.format_exc()))
+            if self.exit_handler:
+                GLib.idle_add(self.exit_handler, self)
 
 
-# Device listesi oluşturmak için dizini taradık
-for f in os.listdir("/dev/input"):
-    # event olmayanları es geç
-    if not f.startswith("event"):
+devices = []
+
+def exit_handler(d):
+    if d.fd_path in devices:
+        devices.remove(d.fd_path)
+    print("Device removed {}".format(d.fd_path))
+    del(d)
+
+def scan_devices():
+    # Device listesi oluşturmak için dizini taradık
+    for f in os.listdir("/dev/input"):
+        # event olmayanları es geç
+        if not f.startswith("event"):
+            continue
+        fd = "/dev/input/" +f
+        if fd in devices:
+            continue
         print("Available:", f)
-        continue
-    # device classı oluştur ve ekle
-    fd = "/dev/input/" +f
-    dev = InputDevice(fd)
-    cap = dev.capabilities()
-    # burda uygun olup olmama kontrolü yapılır
-    print(cap)
-    if (e.EV_KEY in cap and e.BTN_TOUCH in cap[e.EV_KEY]) \
-        or (e.EV_ABS in cap and (e.ABS_X in cap[e.EV_ABS] or e.ABS_MT_POSITION_X in cap[e.EV_ABS])):
-        print("Track:", f)
-        d = Device(dev)
-        d.listen()
+        devices.append(fd)
+        # device classı oluştur ve ekle
+        dev = InputDevice(fd)
+        cap = dev.capabilities()
+        # burda uygun olup olmama kontrolü yapılır
+        print(cap)
+        if (e.EV_KEY in cap and e.BTN_TOUCH in cap[e.EV_KEY]) \
+            or (e.EV_ABS in cap and (e.ABS_X in cap[e.EV_ABS] or e.ABS_MT_POSITION_X in cap[e.EV_ABS])):
+            print("Track:", f)
+            d = Device(dev)
+            d.fd_path = fd
+            d.exit_handler = exit_handler
+            d.listen()
+
+    # Her 10 saniyede bir yeni aygıt var mı diye tara
+    GLib.timeout_add(10*1000, scan_devices)
+
+scan_devices()
 
 # glib loopu kapanmayı engeller ve timeout_add çalışmasını sağlar.
 main = GLib.MainLoop()
