@@ -1,3 +1,11 @@
+eta-right-click (2.0.2) unshable; urgency=medium
+
+  [ Ali Riza KESKIN ]
+  * detect read error and remove device. And scan every 10 sec for device changes
+  * scan event and right click event move to glib loop
+
+ -- Fatih Altun <fatih.altun@pardus.org.tr>  Wed, 06 Aug 2025 15:36:25 +0300
+
 eta-right-click (2.0.1) unshable; urgency=medium
 
   [ Ali Riza KESKIN ]
