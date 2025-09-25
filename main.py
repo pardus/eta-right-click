@@ -36,9 +36,30 @@ capabilities = {
 
 ui = UInput(capabilities)
 
+runtime_dir = "/run/etap/right-click"
+os.makedirs(f"{runtime_dir}/disable", exist_ok=True)
+os.chmod(f"{runtime_dir}/disable", 0o1777)
+
+def check_disable():
+    if not os.path.isdir(f"{runtime_dir}/disable"):
+        print("enable: runtime missing")
+        return False
+    disabled = False
+    for pid in os.listdir(f"{runtime_dir}/disable"):
+        if os.path.isdir(f"/proc/{pid}"):
+            print("disable: block by "+ pid)
+            disabled = True
+        else:
+            os.unlink(f"/tmp/eta-right-click.disable/{pid}")
+    if not disabled:
+        print("enable: blocker not found")
+    return disabled
 
 # sağ tık yap
 def do_right_click():
+    # dosya varsa görmezden gel
+    if check_disable():
+        return
     time.sleep(0.3)
     ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
     ui.syn()
