@@ -1,3 +1,10 @@
+eta-right-click (2.0.4) unshable; urgency=medium
+
+  [ Ali Riza KESKIN ]
+  * fix wrong path
+
+ -- Fatih Altun <fatih.altun@pardus.org.tr>  Thu, 25 Sep 2025 12:46:41 +0300
+
 eta-right-click (2.0.3) unshable; urgency=medium
 
   [ Ali Riza KESKIN ]
