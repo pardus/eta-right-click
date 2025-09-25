@@ -50,7 +50,7 @@ def check_disable():
             print("disable: block by "+ pid)
             disabled = True
         else:
-            os.unlink(f"/tmp/eta-right-click.disable/{pid}")
+            os.unlink(f"{runtime_dir}/disable/{pid}")
     if not disabled:
         print("enable: blocker not found")
     return disabled
