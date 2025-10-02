@@ -1,4 +1,4 @@
-#!/usr/bin/env
+#!/usr/bin/env python3
 import fcntl, os
 import time
 from util import *
