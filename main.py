@@ -34,7 +34,6 @@ capabilities = {
     e.EV_KEY : (e.BTN_LEFT, e.BTN_RIGHT),
 }
 
-ui = UInput(capabilities)
 
 runtime_dir = "/run/etap/right-click"
 os.makedirs(f"{runtime_dir}/disable", exist_ok=True)
@@ -61,13 +60,13 @@ def do_right_click():
     if check_disable():
         return
     time.sleep(0.3)
-    ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
-    ui.syn()
-    time.sleep(0.3)
-    ui.write(e.EV_KEY, e.BTN_RIGHT, 0)
-    ui.syn()
+    with UInput(capabilities) as ui:
+        ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
+        ui.syn()
+        time.sleep(0.3)
+        ui.write(e.EV_KEY, e.BTN_RIGHT, 0)
+        ui.syn()
     print('click')
-
 
 class Device:
 
@@ -232,9 +231,12 @@ def scan_devices():
         dev = InputDevice(fd)
         cap = dev.capabilities()
         # burda uygun olup olmama kontrolü yapılır
-        print(cap)
         if (e.EV_KEY in cap and e.BTN_TOUCH in cap[e.EV_KEY]) \
             or (e.EV_ABS in cap and (e.ABS_X in cap[e.EV_ABS] or e.ABS_MT_POSITION_X in cap[e.EV_ABS])):
+            if e.BTN_TOOL_FINGER in cap[e.EV_KEY] or \
+               e.BTN_TOOL_DOUBLETAP in cap[e.EV_KEY] or \
+               e.BTN_TOOL_TRIPLETAP in cap[e.EV_KEY]:
+                  continue
             print("Track:", f)
             d = Device(dev)
             d.fd_path = fd
