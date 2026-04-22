@@ -159,6 +159,39 @@ class Device:
         self.ctime = time.time()
         self.block = True
 
+    def event_action(self, ev):
+        self.ev = ev
+        # multi touch parmak sayma
+        if ev.code == e.ABS_MT_TRACKING_ID:
+            if ev.value == -1:
+                self.num_of_touch -= 1
+            else:
+                self.num_of_touch += 1
+
+        # hareket ettirilirse sağ tuş eventi iptal edilmeli
+        if ev.code == e.ABS_X or ev.code == e.ABS_Y:
+            self.do_cancel_event(ev.code == e.ABS_X, self.dev.absinfo(ev.code).value)
+        # multi touch hareket eventi
+        elif ev.code == e.ABS_MT_POSITION_X or ev.code == e.ABS_MT_POSITION_Y:
+            if self.num_of_touch == 1:
+                 self.move_count += 1
+            self.do_cancel_event(ev.code == e.ABS_MT_POSITION_X, ev.value)
+
+        # tuşa basma eventi kontrolü
+        if ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH:
+            self.do_left_click_event(ev.value)
+        # multi touch eventi kontrolü
+        elif ev.code == e.ABS_MT_TRACKING_ID:
+            if self.num_of_touch == 0:
+                self.move_count = 0
+                self.do_left_click_event(0)
+            elif self.num_of_touch == 1:
+                self.do_left_click_event(1)
+            else:
+                self.do_cancel_event(None, -1 )
+
+        # event kabul etme
+        return True
 
     @asynchronous
     def listen(self):
@@ -167,44 +200,11 @@ class Device:
         cap[e.EV_KEY] += [e.BTN_RIGHT, e.BTN_LEFT]
         self.ui = UInput(cap, name=f"Amogus device ({self.dev.name})", vendor=0x31, product=0x31)
         self.dev.grab()
-        def event_action(ev):
-            self.ev = ev
-            # multi touch parmak sayma
-            if ev.code == e.ABS_MT_TRACKING_ID:
-                if ev.value == -1:
-                    self.num_of_touch -= 1
-                else:
-                    self.num_of_touch += 1
-
-            # hareket ettirilirse sağ tuş eventi iptal edilmeli
-            if ev.code == e.ABS_X or ev.code == e.ABS_Y:
-                self.do_cancel_event(ev.code == e.ABS_X, self.dev.absinfo(ev.code).value)
-            # multi touch hareket eventi
-            elif ev.code == e.ABS_MT_POSITION_X or ev.code == e.ABS_MT_POSITION_Y:
-                if self.num_of_touch == 1:
-                     self.move_count += 1
-                self.do_cancel_event(ev.code == e.ABS_MT_POSITION_X, ev.value)
-
-            # tuşa basma eventi kontrolü
-            if ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH:
-                self.do_left_click_event(ev.value)
-            # multi touch eventi kontrolü
-            elif ev.code == e.ABS_MT_TRACKING_ID:
-                if self.num_of_touch == 0:
-                    self.move_count = 0
-                    self.do_left_click_event(0)
-                elif self.num_of_touch == 1:
-                    self.do_left_click_event(1)
-                else:
-                    self.do_cancel_event(None, -1 )
-
-            # event kabul etme
-            return True
 
         # Bu kısımda eventler okunur
         try:
             for ev in self.dev.read_loop():
-                if event_action(ev):
+                if self.event_action(ev):
                     self.ui.write_event(ev)
         except:
             print("Device event read failed {}".format(traceback.format_exc()))
