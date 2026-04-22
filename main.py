@@ -54,20 +54,6 @@ def check_disable():
         print("enable: blocker not found")
     return disabled
 
-# sağ tık yap
-def do_right_click():
-    # dosya varsa görmezden gel
-    if check_disable():
-        return
-    time.sleep(0.3)
-    with UInput(capabilities) as ui:
-        ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
-        ui.syn()
-        time.sleep(0.3)
-        ui.write(e.EV_KEY, e.BTN_RIGHT, 0)
-        ui.syn()
-    print('click')
-
 class Device:
 
     def __init__(self, dev):
@@ -102,12 +88,12 @@ class Device:
         print("id:", self.id)
 
 
-    def do_left_click_event(self):
+    def do_left_click_event(self, ev_value):
         self.ctime = time.time()
         self.btime = time.time()
         self.cur_x = self.dev.absinfo(e.ABS_X).value
         self.cur_y = self.dev.absinfo(e.ABS_Y).value
-        # zamana bak ve sağ tık yapılacak mı karar ver
+       # zamana bak ve sağ tık yapılacak mı karar ver
         def handle_right_click(id):
             if self.id != id:
                 self.dump("ignore-id")
@@ -119,7 +105,7 @@ class Device:
                 GLib.idle_add(do_right_click)
                 self.left_click_lock = False
                 self.dump("right-click")
-        if self.ev.value == 1:
+        if ev_value == 1:
             # birden çok basma eventini engelle
             if self.pressed:
                 return
@@ -134,6 +120,19 @@ class Device:
             self.dump("release")
             # kilitlendiyse ve engellenmediyse sağ tıkla
             handle_right_click(self.id)
+
+    # sağ tık yap
+    def do_right_click():
+        # dosya varsa görmezden gel
+        if check_disable():
+            return
+        time.sleep(0.3)
+        self.ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
+        self.ui.syn()
+        time.sleep(0.3)
+        self.ui.write(e.EV_KEY, e.BTN_RIGHT, 0)
+        self.ui.syn()
+        print('click')
 
 
     def do_cancel_event(self, is_x, value):
@@ -167,7 +166,10 @@ class Device:
 
     @asynchronous
     def listen(self):
-        ui = UInput.from_device(self.dev)
+        cap = self.dev.capabilities()
+        del cap[0]
+        cap[e.EV_KEY] += [e.BTN_RIGHT]
+        self.ui = UInput(cap)
         self.dev.grab()
         def event_action(ev):
             self.ev = ev
@@ -189,16 +191,14 @@ class Device:
 
             # tuşa basma eventi kontrolü
             if ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH:
-                self.do_left_click_event()
+                self.do_left_click_event(ev.value)
             # multi touch eventi kontrolü
             elif ev.code == e.ABS_MT_TRACKING_ID:
                 if self.num_of_touch == 0:
-                    self.ev.value = 0
                     self.move_count = 0
-                    self.do_left_click_event()
+                    self.do_left_click_event(0)
                 elif self.num_of_touch == 1:
-                    self.ev.value = 1
-                    self.do_left_click_event()
+                    self.do_left_click_event(1)
                 else:
                     self.do_cancel_event(None, -1 )
 
@@ -209,7 +209,7 @@ class Device:
         try:
             for ev in self.dev.read_loop():
                 if event_action(ev):
-                    ui.write_event(ev)
+                    self.ui.write_event(ev)
         except:
             print("Device event read failed {}".format(traceback.format_exc()))
             if self.exit_handler:
