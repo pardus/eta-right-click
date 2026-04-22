@@ -82,6 +82,7 @@ class Device:
         self.btime = time.time()
         self.left_click_lock = False
         self.block = False
+        self.saved_events = []
         self.id = 0
         self.exit_handler = None
 
@@ -166,6 +167,8 @@ class Device:
 
     @asynchronous
     def listen(self):
+        ui = UInput.from_device(self.dev)
+        self.dev.grab()
         def event_action(ev):
             self.ev = ev
             # multi touch parmak sayma
@@ -198,10 +201,15 @@ class Device:
                     self.do_left_click_event()
                 else:
                     self.do_cancel_event(None, -1 )
+
+            # event kabul etme
+            return True
+
         # Bu kısımda eventler okunur
         try:
             for ev in self.dev.read_loop():
-                event_action(ev)
+                if event_action(ev):
+                    ui.write_event(ev)
         except:
             print("Device event read failed {}".format(traceback.format_exc()))
             if self.exit_handler:
