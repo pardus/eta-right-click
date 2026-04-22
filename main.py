@@ -30,10 +30,6 @@ except Exception as err:
     log(err)
     sys.exit(1)
 
-capabilities = {
-    e.EV_KEY : (e.BTN_LEFT, e.BTN_RIGHT),
-}
-
 
 runtime_dir = "/run/etap/right-click"
 os.makedirs(f"{runtime_dir}/disable", exist_ok=True)
@@ -102,7 +98,7 @@ class Device:
                 self.left_click_lock = True
                 self.dump("lock")
             elif self.left_click_lock:
-                GLib.idle_add(do_right_click)
+                GLib.idle_add(self.do_right_click)
                 self.left_click_lock = False
                 self.dump("right-click")
         if ev_value == 1:
@@ -122,7 +118,7 @@ class Device:
             handle_right_click(self.id)
 
     # sağ tık yap
-    def do_right_click():
+    def do_right_click(self):
         # dosya varsa görmezden gel
         if check_disable():
             return
@@ -168,8 +164,8 @@ class Device:
     def listen(self):
         cap = self.dev.capabilities()
         del cap[0]
-        cap[e.EV_KEY] += [e.BTN_RIGHT]
-        self.ui = UInput(cap)
+        cap[e.EV_KEY] += [e.BTN_RIGHT, e.BTN_LEFT]
+        self.ui = UInput(cap, name=f"Amogus device ({self.dev.name})", vendor=0x31, product=0x31)
         self.dev.grab()
         def event_action(ev):
             self.ev = ev
@@ -238,6 +234,8 @@ def scan_devices():
         # device classı oluştur ve ekle
         dev = InputDevice(fd)
         cap = dev.capabilities()
+        if "Amogus" in dev.name:
+            continue
         # burda uygun olup olmama kontrolü yapılır
         if (e.EV_KEY in cap and e.BTN_TOUCH in cap[e.EV_KEY]) \
             or (e.EV_ABS in cap and (e.ABS_X in cap[e.EV_ABS] or e.ABS_MT_POSITION_X in cap[e.EV_ABS])):
@@ -245,7 +243,7 @@ def scan_devices():
                e.BTN_TOOL_DOUBLETAP in cap[e.EV_KEY] or \
                e.BTN_TOOL_TRIPLETAP in cap[e.EV_KEY]:
                   continue
-            print("Track:", f)
+            print("Track:", f, dev.name)
             d = Device(dev)
             d.fd_path = fd
             d.exit_handler = exit_handler
