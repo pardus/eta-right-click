@@ -5,9 +5,12 @@ from util import *
 import configparser
 
 import traceback
+import threading
 
 from gi.repository import GLib
 from evdev import UInput, InputDevice, ecodes as e
+
+from netlink import NetlinkSocket
 import sys
 
 log=print
@@ -220,41 +223,56 @@ def exit_handler(d):
     print("Device removed {}".format(d.fd_path))
     del(d)
 
+def check_device(f):
+    # event olmayanları es geç
+    if not f.startswith("event"):
+        return
+    fd = "/dev/input/" +f
+    if fd in devices:
+        return
+    print("Available:", f)
+    devices.append(fd)
+    # device classı oluştur ve ekle
+    dev = InputDevice(fd)
+    cap = dev.capabilities()
+    if "Amogus" in dev.name:
+        return
+    # burda uygun olup olmama kontrolü yapılır
+    if (e.EV_KEY in cap and e.BTN_TOUCH in cap[e.EV_KEY]) \
+        or (e.EV_ABS in cap and (e.ABS_X in cap[e.EV_ABS] or e.ABS_MT_POSITION_X in cap[e.EV_ABS])):
+        if e.BTN_TOOL_FINGER in cap[e.EV_KEY] or \
+           e.BTN_TOOL_DOUBLETAP in cap[e.EV_KEY] or \
+           e.BTN_TOOL_TRIPLETAP in cap[e.EV_KEY]:
+            return
+        print("Track:", f, dev.name)
+        d = Device(dev)
+        d.fd_path = fd
+        d.exit_handler = exit_handler
+        d.listen()
+
+def nls_action(event):
+    if "ACTION" in event:
+        if event["ACTION"] != "add":
+            return
+    if "DEVNAME" not in event:
+        return
+    if not event["DEVNAME"].startswith("/dev/input/"):
+        return
+
+    check_device(event["DEVNAME"].split("/")[-1])
+    print("====")
+    print(event)
+
 def scan_devices():
     # Device listesi oluşturmak için dizini taradık
     for f in os.listdir("/dev/input"):
-        # event olmayanları es geç
-        if not f.startswith("event"):
-            continue
-        fd = "/dev/input/" +f
-        if fd in devices:
-            continue
-        print("Available:", f)
-        devices.append(fd)
-        # device classı oluştur ve ekle
-        dev = InputDevice(fd)
-        cap = dev.capabilities()
-        if "Amogus" in dev.name:
-            continue
-        # burda uygun olup olmama kontrolü yapılır
-        if (e.EV_KEY in cap and e.BTN_TOUCH in cap[e.EV_KEY]) \
-            or (e.EV_ABS in cap and (e.ABS_X in cap[e.EV_ABS] or e.ABS_MT_POSITION_X in cap[e.EV_ABS])):
-            if e.BTN_TOOL_FINGER in cap[e.EV_KEY] or \
-               e.BTN_TOOL_DOUBLETAP in cap[e.EV_KEY] or \
-               e.BTN_TOOL_TRIPLETAP in cap[e.EV_KEY]:
-                  continue
-            print("Track:", f, dev.name)
-            d = Device(dev)
-            d.fd_path = fd
-            d.exit_handler = exit_handler
-            d.listen()
+        check_device(f)
+    nls = NetlinkSocket()
+    nls.action = nls_action
+    th = threading.Thread(target=nls.run)
+    th.start()
 
-    # Her 10 saniyede bir yeni aygıt var mı diye tara
-    GLib.timeout_add(10*1000, scan_devices)
-
-# aygıt taramaya başla (glib loopu içinde)
 GLib.idle_add(scan_devices)
-
 # glib loopu kapanmayı engeller ve timeout_add çalışmasını sağlar.
 main = GLib.MainLoop()
 main.run()
