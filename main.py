@@ -82,18 +82,6 @@ class Device:
         self.ui.syn()
         print('touch click')
 
-    # sağ tık yap
-    def do_right_click(self):
-        # dosya varsa görmezden gel
-        if self.cancel:
-            return
-        self.ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
-        self.ui.syn()
-        time.sleep(0.3)
-        self.ui.write(e.EV_KEY, e.BTN_RIGHT, 0)
-        self.ui.syn()
-        print('right click')
-
 
     def is_pressed(self, ev):
         return ((ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH) and ev.value == 1) \
