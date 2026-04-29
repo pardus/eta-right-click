@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import fcntl, os
+import math
 import time
 from util import *
 import configparser
@@ -58,7 +59,9 @@ class Device:
         self.dev = dev
         self.move_count = 0
         self.evtime = 0
+        self.pos_begin = [-1, -1]
         self.pos = [-1,-1]
+        self.cur_event = []
         self.saved_events = []
         self.exit_handler = None
 
@@ -83,45 +86,66 @@ class Device:
         print('touch click')
 
 
-    def is_pressed(self, ev):
-        return ((ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH) and ev.value == 1) \
-                or (ev.code == e.ABS_MT_TRACKING_ID and ev.value != -1)
+    def is_pressed(self):
+        for ev in self.cur_event:
+            if (ev.type == e.EV_KEY and (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH) and ev.value == 1) \
+                or (ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID and ev.value != -1):
+                return True
+        return False
 
-    def get_event_pos(self, ev):
-        if (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH):
-            self.pos[0] = self.dev.absinfo(e.ABS_X).value
-            self.pos[1] = self.dev.absinfo(e.ABS_Y).value
-        if ev.code == e.ABS_MT_POSITION_X:
-            self.pos[0] = ev.value
-        if ev.code == e.ABS_MT_POSITION_Y:
-            self.pos[1] = ev.value
+    def get_event_pos(self):
+        for ev in self.cur_event:
+            if (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH):
+                self.pos[0] = self.dev.absinfo(e.ABS_X).value
+                self.pos[1] = self.dev.absinfo(e.ABS_Y).value
+            if ev.code == e.ABS_MT_POSITION_X:
+                self.pos[0] = ev.value
+            if ev.code == e.ABS_MT_POSITION_Y:
+                self.pos[1] = ev.value
 
-    def is_released(self, ev):
-        released =  ((ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH) and ev.value == 0) \
-                or (ev.code == e.ABS_MT_TRACKING_ID and ev.value == -1)
-        if released:
-            self.pos = [-1, -1]
-        return released
+    def is_released(self):
+        for ev in self.cur_event:
+            if (ev.type == e.EV_KEY and (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH) and ev.value == 0) \
+                    or (ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID and ev.value == -1):
+                self.pos = [-1, -1]
+                return True
+        return False
 
+    def calculate_distance(self):
+        a = abs(self.pos[0] - self.pos_begin[0])
+        b = abs(self.pos[0] - self.pos_begin[0])
+        return math.sqrt(a**2 + b**2)
 
-    def is_move(self, ev):
-        return (ev.code == e.ABS_X or ev.code == e.ABS_Y) \
-                or (ev.code == e.ABS_MT_POSITION_X or ev.code == e.ABS_MT_POSITION_Y)
 
     def event_action(self, ev):
+        print_event(ev)
         self.ev = ev
 
-        self.get_event_pos(ev)
+        if ev.type != e.EV_SYN:
+            self.cur_event.append(ev)
+            return False
 
-        print_event(ev)
+        self.get_event_pos()
+
+        if len(self.cur_event) == 0:
+            return False
+        elif self.is_pressed():
+            self.pos_begin[0] = self.pos[0]
+            self.pos_begin[1] = self.pos[1]
+            print("press", self.pos, self.pos_begin)
+        elif self.is_released():
+            self.pos_begin = [-1, -1]
+            print("release", self.pos, self.pos_begin)
+        else:
+            print("move", self.pos, self.pos_begin, self.calculate_distance())
+
+
+        for _ev in self.cur_event:
+            self.ui.write_event(_ev)
+        self.ui.write_event(ev)
+        self.cur_event = []
 
         # event kabul etme
-        if self.is_pressed(ev):
-            print("press", self.pos)
-        if self.is_released(ev):
-            print("release", self.pos)
-        if self.is_move(ev):
-            print("move", self.pos)
         return True
 
     @asynchronous
@@ -134,11 +158,16 @@ class Device:
 
         # Bu kısımda eventler okunur
         try:
+            ev_old = None
             for ev in self.dev.read_loop():
-                if ev.type in [e.EV_MSC, e.EV_SYN]:
+                # üst üste 2 kere syn gelmemesi için
+                if ev_old == e.EV_SYN and ev.type == e.EV_SYN:
+                    continue
+                ev_old = ev.type
+                if ev.type in [e.EV_MSC]:
                     self.ui.write_event(ev)
                 elif self.event_action(ev) or check_disable():
-                    self.ui.write_event(ev)
+                    pass
         except:
             print("Device event read failed {}".format(traceback.format_exc()))
             if self.exit_handler:
