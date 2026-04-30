@@ -63,6 +63,7 @@ class Device:
         self.pos_begin = [-1, -1]
         self.pos = [-1,-1]
         self.cur_event = []
+        self.lock = False
         self.saved_events = []
         self.exit_handler = None
 
@@ -129,9 +130,16 @@ class Device:
         b = (b*1080) /self.abs_max[1]
         return math.sqrt(a**2 + b**2)
 
+    def do_event(self):
+        print("do-event")
+        for _evs in self.saved_events:
+            for _ev in _evs:
+                self.ui.write_event(_ev)
+            self.ui.syn()
+        self.saved_events = []
 
     def event_action(self, ev):
-        print_event(ev)
+        #print_event(ev)
         self.ev = ev
 
         if ev.type != e.EV_SYN:
@@ -140,28 +148,36 @@ class Device:
 
         self.get_event_pos()
 
+        distance = self.calculate_distance()
         if len(self.cur_event) == 0:
             return False
         elif self.is_pressed():
             self.pos_begin[0] = self.pos[0]
             self.pos_begin[1] = self.pos[1]
             print("press", self.pos, self.pos_begin)
+            self.saved_events.append(self.cur_event)
         elif self.is_released():
             self.pos_begin = [-1, -1]
-            print("release", self.pos, self.pos_begin)
+            print("release", self.pos, self.pos_begin, distance)
+            if distance < threshold:
+                self.do_event()
         elif self.is_move():
-            print("move", self.pos, self.pos_begin, self.calculate_distance())
+            print("move", self.pos, self.pos_begin, distance)
+            if distance > threshold:
+                self.do_event()
         else:
             print("other", self.pos, self.pos_begin)
 
+
+        if len(self.saved_events) > 0:
+            self.cur_event = []
+            return False
 
         for _ev in self.cur_event:
             self.ui.write_event(_ev)
         self.ui.write_event(ev)
         self.cur_event = []
 
-        # event kabul etme
-        return True
 
     @asynchronous
     def listen(self):
