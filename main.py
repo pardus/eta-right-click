@@ -57,6 +57,7 @@ class Device:
 
     def __init__(self, dev):
         self.dev = dev
+        self.abs_max = [dev.absinfo(e.ABS_X).max, dev.absinfo(e.ABS_Y).max]
         self.move_count = 0
         self.evtime = 0
         self.pos_begin = [-1, -1]
@@ -102,6 +103,8 @@ class Device:
                 self.pos[0] = ev.value
             if ev.code == e.ABS_MT_POSITION_Y:
                 self.pos[1] = ev.value
+        self.pos[0] = (1920*self.pos[0]) / self.abs_max[0]
+        self.pos[1] = (1080*self.pos[1]) / self.abs_max[1]
 
     def is_released(self):
         for ev in self.cur_event:
@@ -113,7 +116,9 @@ class Device:
 
     def calculate_distance(self):
         a = abs(self.pos[0] - self.pos_begin[0])
-        b = abs(self.pos[0] - self.pos_begin[0])
+        a = (a*1920) /self.abs_max[0]
+        b = abs(self.pos[1] - self.pos_begin[1])
+        b = (b*1080) /self.abs_max[1]
         return math.sqrt(a**2 + b**2)
 
 
