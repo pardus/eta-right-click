@@ -114,6 +114,14 @@ class Device:
                 return True
         return False
 
+    def is_move(self):
+        for ev in self.cur_event:
+            if ev.type == e.EV_ABS and (ev.code == e.ABS_X or ev.code == e.ABS_Y \
+                or ev.code == e.ABS_MT_POSITION_X or ev.code == e.ABS_MT_POSITION_Y):
+                    return True
+        return False
+
+
     def calculate_distance(self):
         a = abs(self.pos[0] - self.pos_begin[0])
         a = (a*1920) /self.abs_max[0]
@@ -141,8 +149,10 @@ class Device:
         elif self.is_released():
             self.pos_begin = [-1, -1]
             print("release", self.pos, self.pos_begin)
-        else:
+        elif self.is_move():
             print("move", self.pos, self.pos_begin, self.calculate_distance())
+        else:
+            print("other", self.pos, self.pos_begin)
 
 
         for _ev in self.cur_event:
