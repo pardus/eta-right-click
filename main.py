@@ -9,7 +9,7 @@ import traceback
 import threading
 
 from gi.repository import GLib
-from evdev import UInput, InputDevice, ecodes as e
+from evdev import UInput, InputDevice, AbsInfo, ecodes as e
 from evdev.evtest import print_event
 
 from netlink import NetlinkSocket
@@ -60,10 +60,14 @@ class Device:
         self.cur_event = []
         self.saved_events = []
         self.exit_handler = None
+        self.lock = False
         self.id = 0
 
     # sağ tık yap
     def do_right_click(self):
+        self.ui.write(e.EV_ABS, e.ABS_X, self.pos[0])
+        self.ui.write(e.EV_ABS, e.ABS_Y, self.pos[1])
+        self.ui.syn()
         self.ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
         self.ui.syn()
         time.sleep(0.3)
@@ -76,6 +80,8 @@ class Device:
             return
         if check_disable():
             return
+        self.lock = True
+        self.do_right_click()
         print('check-click')
 
     def is_pressed(self, evs):
@@ -150,6 +156,9 @@ class Device:
             self.pos_begin = [-1, -1]
             self.id += 1
             print("release", self.pos, self.pos_begin, distance)
+            if self.lock:
+                self.cur_event = []
+                self.lock = False
             if distance < threshold:
                 self.do_event()
         elif self.is_move(self.cur_event):
