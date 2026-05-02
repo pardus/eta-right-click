@@ -20,20 +20,17 @@ if "--debug" not in sys.argv:
     def print(*args, **kwargs):
         pass
 
-sensitive = 0.1  # cihaza göre ayarlanması gereken hassaslık
 timeout   = 700  # uzun basma bekleme süresi
-threshold = 0.05 # görmezden gelinen minimum oran
+threshold = 20 # görmezden gelinen minimum pixel
 
-config = configparser.ConfigParser()
-config.read("/etc/pardus/eta-right-click.conf")
 
 try:
-    sensitive = float(config["main"]["sensitive"])
+    config = configparser.ConfigParser()
+    config.read("/etc/pardus/eta-right-click.conf")
     timeout   = float(config["main"]["timeout"])
     threshold  = float(config["main"]["threshold"])
 except Exception as err:
     log(err)
-    sys.exit(1)
 
 
 runtime_dir = "/run/etap/right-click"
@@ -58,19 +55,15 @@ class Device:
     def __init__(self, dev):
         self.dev = dev
         self.abs_max = [dev.absinfo(e.ABS_X).max, dev.absinfo(e.ABS_Y).max]
-        self.move_count = 0
-        self.evtime = 0
         self.pos_begin = [-1, -1]
         self.pos = [-1,-1]
         self.cur_event = []
-        self.lock = False
         self.saved_events = []
         self.exit_handler = None
-
+        self.id = 0
 
     # sağ tık yap
     def do_right_click(self):
-        time.sleep(0.3)
         self.ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
         self.ui.syn()
         time.sleep(0.3)
@@ -78,18 +71,15 @@ class Device:
         self.ui.syn()
         print('click')
 
-    # düz tık yap
-    def do_left_click(self):
-        self.ui.write(e.EV_KEY, e.BTN_TOUCH, 1)
-        self.ui.syn()
-        #time.sleep(0.3)
-        self.ui.write(e.EV_KEY, e.BTN_TOUCH, 0)
-        self.ui.syn()
-        print('touch click')
+    def right_click_handler(self, id):
+        if self.id != id:
+            return
+        if check_disable():
+            return
+        print('check-click')
 
-
-    def is_pressed(self):
-        for ev in self.cur_event:
+    def is_pressed(self, evs):
+        for ev in evs:
             if (ev.type == e.EV_KEY and (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH) and ev.value == 1) \
                 or (ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID and ev.value != -1):
                 return True
@@ -104,19 +94,17 @@ class Device:
                 self.pos[0] = ev.value
             if ev.code == e.ABS_MT_POSITION_Y:
                 self.pos[1] = ev.value
-        self.pos[0] = (1920*self.pos[0]) / self.abs_max[0]
-        self.pos[1] = (1080*self.pos[1]) / self.abs_max[1]
 
-    def is_released(self):
-        for ev in self.cur_event:
+    def is_released(self, evs):
+        for ev in evs:
             if (ev.type == e.EV_KEY and (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH) and ev.value == 0) \
                     or (ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID and ev.value == -1):
                 self.pos = [-1, -1]
                 return True
         return False
 
-    def is_move(self):
-        for ev in self.cur_event:
+    def is_move(self, evs):
+        for ev in evs:
             if ev.type == e.EV_ABS and (ev.code == e.ABS_X or ev.code == e.ABS_Y \
                 or ev.code == e.ABS_MT_POSITION_X or ev.code == e.ABS_MT_POSITION_Y):
                     return True
@@ -128,7 +116,7 @@ class Device:
         a = (a*1920) /self.abs_max[0]
         b = abs(self.pos[1] - self.pos_begin[1])
         b = (b*1080) /self.abs_max[1]
-        return math.sqrt(a**2 + b**2)
+        return int(math.sqrt(a**2 + b**2))
 
     def do_event(self):
         print("do-event")
@@ -151,19 +139,23 @@ class Device:
         distance = self.calculate_distance()
         if len(self.cur_event) == 0:
             return False
-        elif self.is_pressed():
+        elif self.is_pressed(self.cur_event):
             self.pos_begin[0] = self.pos[0]
             self.pos_begin[1] = self.pos[1]
             print("press", self.pos, self.pos_begin)
             self.saved_events.append(self.cur_event)
-        elif self.is_released():
+            self.id += 1
+            GLib.timeout_add(timeout, self.right_click_handler, self.id)
+        elif self.is_released(self.cur_event):
             self.pos_begin = [-1, -1]
+            self.id += 1
             print("release", self.pos, self.pos_begin, distance)
             if distance < threshold:
                 self.do_event()
-        elif self.is_move():
+        elif self.is_move(self.cur_event):
             print("move", self.pos, self.pos_begin, distance)
             if distance > threshold:
+                self.id += 1
                 self.do_event()
         else:
             print("other", self.pos, self.pos_begin)
@@ -197,7 +189,7 @@ class Device:
                 ev_old = ev.type
                 if ev.type in [e.EV_MSC]:
                     self.ui.write_event(ev)
-                elif self.event_action(ev) or check_disable():
+                elif self.event_action(ev):
                     pass
         except:
             print("Device event read failed {}".format(traceback.format_exc()))
