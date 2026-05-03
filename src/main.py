@@ -64,6 +64,7 @@ class Device:
         self.lock = False
         self.id = 0
 
+    @asynchronous
     def do_click(self, btn):
         if self.pos[0] < 0 or self.pos[1] < 0:
             return
