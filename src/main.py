@@ -6,6 +6,7 @@ from util import *
 import configparser
 
 import traceback
+import subprocess
 import threading
 
 from gi.repository import GLib
@@ -63,17 +64,12 @@ class Device:
         self.lock = False
         self.id = 0
 
-    # sağ tık yap
-    def do_right_click(self):
-        self.ui.write(e.EV_ABS, e.ABS_X, self.pos[0])
-        self.ui.write(e.EV_ABS, e.ABS_Y, self.pos[1])
-        self.ui.syn()
-        self.ui.write(e.EV_KEY, e.BTN_RIGHT, 1)
-        self.ui.syn()
-        time.sleep(0.3)
-        self.ui.write(e.EV_KEY, e.BTN_RIGHT, 0)
-        self.ui.syn()
-        print('click')
+    def do_click(self, btn):
+        if self.pos[0] < 0 or self.pos[1] < 0:
+            return
+        x = int((3840*self.pos[0]) / self.abs_max[0])
+        y = int((2160*self.pos[1]) / self.abs_max[1])
+        subprocess.run(["eta-click", btn, str(x), str(y)])
 
     def right_click_handler(self, id):
         if self.id != id:
@@ -81,7 +77,7 @@ class Device:
         if check_disable():
             return
         self.lock = True
-        self.do_right_click()
+        self.do_click("right")
         print('check-click')
 
     def is_pressed(self, evs):
@@ -105,7 +101,6 @@ class Device:
         for ev in evs:
             if (ev.type == e.EV_KEY and (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH) and ev.value == 0) \
                     or (ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID and ev.value == -1):
-                self.pos = [-1, -1]
                 return True
         return False
 
@@ -153,14 +148,17 @@ class Device:
             self.id += 1
             GLib.timeout_add(timeout, self.right_click_handler, self.id)
         elif self.is_released(self.cur_event):
-            self.pos_begin = [-1, -1]
-            self.id += 1
             print("release", self.pos, self.pos_begin, distance)
             if self.lock:
                 self.cur_event = []
                 self.lock = False
+                self.pos = [-1, -1]
+                return False
             if distance < threshold:
                 self.do_event()
+            self.pos_begin = [-1, -1]
+            self.pos = [-1, -1]
+            self.id += 1
         elif self.is_move(self.cur_event):
             print("move", self.pos, self.pos_begin, distance)
             if distance > threshold:

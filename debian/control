@@ -2,12 +2,12 @@ Source: eta-right-click
 Section: utils
 Priority: optional
 Maintainer: Ali Rıza KESKİN <ali.riza.keskin@pardus.org.tr>
-Build-Depends: make
+Build-Depends: debhelper (>= 12), meson (>= 0.50.0), pkg-config
 Standards-Version: 4.3.0
 Homepage: https://pardus.org.tr
 
 Package: eta-right-click
-Architecture: all
+Architecture: any
 Depends: ${misc:Depends},
          libc6,
          python3-evdev
