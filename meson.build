@@ -12,7 +12,7 @@ executable(
 
 install_subdir(
     'src',
-    install_dir: get_option('prefix') / 'eta-right-click',
+    install_dir: get_option('prefix') / 'share/eta/eta-right-click',
     strip_directory: true
 )
 

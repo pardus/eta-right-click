@@ -14,6 +14,7 @@ static int setup_uinput(int fd, int max_x, int max_y) {
     if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0) return -1;
     if (ioctl(fd, UI_SET_KEYBIT, BTN_LEFT) < 0) return -1;
     if (ioctl(fd, UI_SET_KEYBIT, BTN_RIGHT) < 0) return -1;
+    if (ioctl(fd, UI_SET_KEYBIT, BTN_MIDDLE) < 0) return -1;
 
     if (ioctl(fd, UI_SET_EVBIT, EV_ABS) < 0) return -1;
     if (ioctl(fd, UI_SET_ABSBIT, ABS_X) < 0) return -1;
@@ -48,25 +49,26 @@ static int emit(int fd, __u16 type, __u16 code, __s32 value) {
 
 int main(int argc, char **argv) {
     int fd;
-    int x = -1, y = -1; 
+    int x = -1, y = -1;
     int maxx = 3840, maxy = 2160;
-    int btn = -1;
+    int btn = BTN_LEFT;
 
     if (argc >= 2){
         if(strcmp(argv[1], "right") == 0){
             btn = BTN_RIGHT;
-        } else if(strcmp(argv[2], "left") == 0){
+        } else if(strcmp(argv[1], "left") == 0){
             btn = BTN_LEFT;
+        } else if(strcmp(argv[1], "middle") == 0){
+            btn = BTN_MIDDLE;
         }
     }
-        
+
     if (argc >= 3) {
         x = atoi(argv[2]);
         y = atoi(argv[3]);
-        
     }
-    printf("%d %d\n", x, y);
-    
+
+    printf("%d %d %d\n", x, y, btn);
     fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
     if (fd < 0) {
         perror("open /dev/uinput");
@@ -81,25 +83,20 @@ int main(int argc, char **argv) {
 
     usleep(100000);
 
-    if (x < 0 || y < 0){
-        // Move to absolute position
-        if (emit(fd, EV_ABS, ABS_X, x) < 0) { perror("emit ABS_X"); }
-        if (emit(fd, EV_ABS, ABS_Y, y) < 0) { perror("emit ABS_Y"); }
-        esync(fd);
-    }
+    // Move to absolute position
+    if (x > 0 && emit(fd, EV_ABS, ABS_X, x) < 0) { perror("emit ABS_X"); }
+    if (y > 0 && emit(fd, EV_ABS, ABS_Y, y) < 0) { perror("emit ABS_Y"); }
+    esync(fd);
     usleep(20000);
 
-    if(btn < 0){
-        // Press right button
-        emit(fd, EV_KEY, btn, 1);
-        esync(fd);
+    // Press right button
+    emit(fd, EV_KEY, btn, 1);
+    esync(fd);
 
-        usleep(20000);
-
-        // Release right button
-        emit(fd, EV_KEY, btn, 0);
-        esync(fd);
-    }
+    usleep(200000);
+    // Release right button
+    emit(fd, EV_KEY, btn, 0);
+    esync(fd);
 
     ioctl(fd, UI_DEV_DESTROY);
     close(fd);
