@@ -151,6 +151,7 @@ class Device:
         elif self.is_released(self.cur_event):
             print("release", self.pos, self.pos_begin, distance)
             if self.lock:
+                self.saved_events = []
                 self.cur_event = []
                 self.lock = False
                 self.pos = [-1, -1]
