@@ -21,7 +21,7 @@ if "--debug" not in sys.argv:
     def print(*args, **kwargs):
         pass
 
-timeout   = 700  # uzun basma bekleme süresi
+timeout   = 500  # uzun basma bekleme süresi
 threshold = 20 # görmezden gelinen minimum pixel
 
 
@@ -115,9 +115,9 @@ class Device:
 
     def calculate_distance(self):
         a = abs(self.pos[0] - self.pos_begin[0])
-        a = (a*1920) /self.abs_max[0]
+        a = (a*3840) /self.abs_max[0]
         b = abs(self.pos[1] - self.pos_begin[1])
-        b = (b*1080) /self.abs_max[1]
+        b = (b*2160) /self.abs_max[1]
         return int(math.sqrt(a**2 + b**2))
 
     def do_event(self):
@@ -166,6 +166,8 @@ class Device:
             if distance > threshold:
                 self.id += 1
                 self.do_event()
+            else:
+                self.saved_events.append(self.cur_event)
         else:
             print("other", self.pos, self.pos_begin)
 
