@@ -10,7 +10,7 @@ import subprocess
 import threading
 
 from gi.repository import GLib
-from evdev import UInput, InputDevice, AbsInfo, ecodes as e
+from evdev import UInput, InputDevice, AbsInfo, InputEvent, ecodes as e
 from evdev.evtest import print_event
 
 from netlink import NetlinkSocket
@@ -129,7 +129,7 @@ class Device:
         self.saved_events = []
 
     def event_action(self, ev):
-        #print_event(ev)
+        print_event(ev)
         self.ev = ev
 
         if ev.type != e.EV_SYN:
@@ -198,6 +198,9 @@ class Device:
                 if ev_old == e.EV_SYN and ev.type == e.EV_SYN:
                     continue
                 ev_old = ev.type
+                if ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID:
+                    _ev = InputEvent(0, 0, e.EV_SYN, 0, 0)
+                    self.event_action(_ev)
                 if ev.type in [e.EV_MSC]:
                     self.ui.write_event(ev)
                 elif self.event_action(ev):
