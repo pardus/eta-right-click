@@ -11,6 +11,8 @@
 
 static int setup_uinput(int fd, int max_x, int max_y) {
     struct uinput_user_dev udev;
+    if (ioctl(fd, UI_SET_EVBIT, EV_REL) < 0) return -1;
+
     if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0) return -1;
     if (ioctl(fd, UI_SET_KEYBIT, BTN_LEFT) < 0) return -1;
     if (ioctl(fd, UI_SET_KEYBIT, BTN_RIGHT) < 0) return -1;
@@ -81,10 +83,11 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    usleep(100000);
+    usleep(300000);
 
     // Move to absolute position
     if (x > 0 && emit(fd, EV_ABS, ABS_X, x) < 0) { perror("emit ABS_X"); }
+    esync(fd);
     if (y > 0 && emit(fd, EV_ABS, ABS_Y, y) < 0) { perror("emit ABS_Y"); }
     esync(fd);
     usleep(20000);

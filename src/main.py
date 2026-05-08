@@ -155,12 +155,10 @@ class Device:
                 self.saved_events = []
                 self.cur_event = []
                 self.lock = False
-                self.pos = [-1, -1]
                 return False
             if distance < threshold:
                 self.do_event()
             self.pos_begin = [-1, -1]
-            self.pos = [-1, -1]
             self.id += 1
         elif self.is_move(self.cur_event):
             print("move", self.pos, self.pos_begin, distance)
