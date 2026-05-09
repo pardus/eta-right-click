@@ -64,22 +64,17 @@ class Device:
         self.exit_handler = None
         self.lock = False
         self.id = 0
-        self.socket_init()
-
-
-    def socket_init(self):
-        try:
-            self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.sock.connect("/run/eta-click.sock")
-        except Exception as e:
-            log(f"eta-click socket error: {e}")
-
 
     def send_ev(self, etype, ecode, evalue):
         try:
-            GLib.idle_add(self.sock.sendall, struct.pack('iii', etype, ecode, evalue))
+        
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.connect("/run/eta-click.sock")
+            sock.sendall(struct.pack('iii', etype, ecode, evalue))
+            sock.close()
         except Exception as e:
             log(f"eta-click socket error: {e}")
+
 
     @asynchronous
     def do_click(self, btn):
@@ -233,7 +228,6 @@ class Device:
         except:
             print("Device event read failed {}".format(traceback.format_exc()))
             if self.exit_handler:
-                self.socket.close()
                 GLib.idle_add(self.exit_handler, self)
 
 
