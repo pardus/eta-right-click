@@ -6,6 +6,7 @@ project('eta-right-click', 'c',
 executable(
     'eta-click',
     'src/click.c',
+    dependencies: dependency('threads'),
     install: true,
     install_dir: get_option('bindir')
 )
