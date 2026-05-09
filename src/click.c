@@ -23,24 +23,33 @@ struct event {
 };
 
 static int uinput_fd = -1;
-static volatile sig_atomic_t running = 1;
+static pthread_mutex_t click_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 static int setup_uinput(int fd) {
     struct uinput_user_dev udev;
+
+    // relative mouse
     if (ioctl(fd, UI_SET_EVBIT, EV_REL) < 0) return -1;
 
+    // mouse buttons
     if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0) return -1;
     if (ioctl(fd, UI_SET_KEYBIT, BTN_LEFT) < 0) return -1;
     if (ioctl(fd, UI_SET_KEYBIT, BTN_RIGHT) < 0) return -1;
     if (ioctl(fd, UI_SET_KEYBIT, BTN_MIDDLE) < 0) return -1;
 
+    // ABS mouse axis
     if (ioctl(fd, UI_SET_EVBIT, EV_ABS) < 0) return -1;
     if (ioctl(fd, UI_SET_ABSBIT, ABS_X) < 0) return -1;
     if (ioctl(fd, UI_SET_ABSBIT, ABS_Y) < 0) return -1;
 
+    // Keyboard
+    for (int i = 1; i <= 245; i++) {
+        if (ioctl(fd, UI_SET_KEYBIT, i) < 0) return -1;
+    }
+
     memset(&udev, 0, sizeof(udev));
-    snprintf(udev.name, sizeof(udev.name), "Amogus Right Click");
+    snprintf(udev.name, sizeof(udev.name), "Amogus Virtual Device");
     udev.id.bustype = BUS_USB;
     udev.id.vendor  = 0x1923;
     udev.id.product = 0x1299;
@@ -60,7 +69,10 @@ static int emit(__u16 type, __u16 code, __s32 value) {
     ie.type = type;
     ie.code = code;
     ie.value = value;
-    if (write(uinput_fd, &ie, sizeof(ie)) < 0) return -1;
+    pthread_mutex_lock(&click_mutex);
+    ssize_t ret = write(uinput_fd, &ie, sizeof(ie));
+    pthread_mutex_unlock(&click_mutex);
+    if (ret < 0) return -1;
     return 0;
 }
 
@@ -130,7 +142,7 @@ int main(int argc, char **argv) {
 
     printf("eta-click: listening on %s\n", SOCKET_PATH);
 
-    while (running) {
+    while (1) {
         struct sockaddr_un client_addr;
         socklen_t client_len = sizeof(client_addr);
         int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);

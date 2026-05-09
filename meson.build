@@ -29,3 +29,9 @@ install_data(
     install_dir: '/lib/systemd/system',
     rename: 'eta-right-click.service'
 )
+
+install_data(
+    'data/eta-click.systemd',
+    install_dir: '/lib/systemd/system',
+    rename: 'eta-click.service'
+)
