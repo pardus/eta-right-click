@@ -63,11 +63,11 @@ class Device:
         self.saved_events = []
         self.exit_handler = None
         self.lock = False
+        self.num_of_touch = 0
         self.id = 0
 
     def send_ev(self, etype, ecode, evalue):
         try:
-        
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             sock.connect("/run/eta-click.sock")
             sock.sendall(struct.pack('iii', etype, ecode, evalue))
@@ -85,13 +85,12 @@ class Device:
         self.send_ev(e.EV_ABS, e.ABS_X, x)
         self.send_ev(e.EV_ABS, e.ABS_Y, y)
         self.send_ev(0, 0, 0)
-        
+
         self.send_ev(e.EV_KEY, btn, 1)
         self.send_ev(0, 0, 0)
         time.sleep(0.03)
         self.send_ev(e.EV_KEY, btn, 0)
         self.send_ev(0, 0, 0)
-        
 
     def right_click_handler(self, id):
         if self.id != id:
@@ -141,8 +140,13 @@ class Device:
         b = (b*2160) /self.abs_max[1]
         return int(math.sqrt(a**2 + b**2))
 
+    def calculate_touch(self):
+        if self.is_pressed(self.cur_event):
+            self.num_of_touch += 1
+        elif self.is_released(self.cur_event):
+            self.num_of_touch -= 1
+
     def do_event(self):
-        print("do-event")
         for _evs in self.saved_events:
             for _ev in _evs:
                 self.ui.write_event(_ev)
@@ -161,17 +165,19 @@ class Device:
         self.get_event_pos()
 
         distance = self.calculate_distance()
+        self.calculate_touch()
+
         if len(self.cur_event) == 0:
             return False
         elif self.is_pressed(self.cur_event):
             self.pos_begin[0] = self.pos[0]
             self.pos_begin[1] = self.pos[1]
-            print("press", self.pos, self.pos_begin)
+            print("press", self.pos, self.pos_begin, self.num_of_touch)
             self.saved_events.append(self.cur_event)
             self.id += 1
             GLib.timeout_add(timeout, self.right_click_handler, self.id)
         elif self.is_released(self.cur_event):
-            print("release", self.pos, self.pos_begin, distance)
+            print("release", self.pos, self.pos_begin, distance, self.num_of_touch)
             if self.lock:
                 self.saved_events = []
                 self.cur_event = []
@@ -182,7 +188,7 @@ class Device:
             self.pos_begin = [-1, -1]
             self.id += 1
         elif self.is_move(self.cur_event):
-            print("move", self.pos, self.pos_begin, distance)
+            print("move", self.pos, self.pos_begin, distance, self.num_of_touch)
             if distance > threshold:
                 self.id += 1
                 self.do_event()
