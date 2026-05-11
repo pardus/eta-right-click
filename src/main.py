@@ -103,14 +103,14 @@ class Device:
         print('check-click')
 
     def is_pressed(self, evs):
-        for ev in evs:
+        for ev, et in evs:
             if (ev.type == e.EV_KEY and (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH) and ev.value == 1) \
                 or (ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID and ev.value != -1):
                 return True
         return False
 
     def get_event_pos(self):
-        for ev in self.cur_event:
+        for ev, et in self.cur_event:
             if (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH):
                 self.pos[0] = self.dev.absinfo(e.ABS_X).value
                 self.pos[1] = self.dev.absinfo(e.ABS_Y).value
@@ -120,14 +120,14 @@ class Device:
                 self.pos[1] = ev.value
 
     def is_released(self, evs):
-        for ev in evs:
+        for ev, et in evs:
             if (ev.type == e.EV_KEY and (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH) and ev.value == 0) \
                     or (ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID and ev.value == -1):
                 return True
         return False
 
     def is_move(self, evs):
-        for ev in evs:
+        for ev, et in evs:
             if ev.type == e.EV_ABS and (ev.code == e.ABS_X or ev.code == e.ABS_Y \
                 or ev.code == e.ABS_MT_POSITION_X or ev.code == e.ABS_MT_POSITION_Y):
                     return True
@@ -143,8 +143,12 @@ class Device:
 
     def do_event(self):
         print("do-event")
+        t = 0
         for _evs in self.saved_events:
-            for _ev in _evs:
+            for _ev, _et in _evs:
+                if t > 0:
+                    time.sleep(_et - t)
+                t = _et
                 self.ui.write_event(_ev)
             self.ui.syn()
         self.saved_events = []
@@ -155,7 +159,7 @@ class Device:
         self.ev = ev
 
         if ev and ev.type != e.EV_SYN:
-            self.cur_event.append(ev)
+            self.cur_event.append((ev, time.time()))
             return False
 
         self.get_event_pos()
@@ -196,7 +200,7 @@ class Device:
             self.cur_event = []
             return False
 
-        for _ev in self.cur_event:
+        for _ev, _et in self.cur_event:
             self.ui.write_event(_ev)
         if ev:
             self.ui.write_event(ev)
