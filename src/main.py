@@ -176,10 +176,11 @@ class Device:
 
         if len(self.cur_event) == 0:
             return False
-        if self.is_multi_touch(self.cur_event):
+        if self.is_multi_touch(self.cur_event) or self.num_of_touch > 1:
             self.saved_events.append(self.cur_event)
             self.do_event()
             self.cur_event = []            
+            self.id += 1
             return False
         elif self.is_pressed(self.cur_event):
             self.pos_begin[0] = self.pos[0]
