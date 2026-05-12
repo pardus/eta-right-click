@@ -35,6 +35,11 @@ install_data(
 )
 
 install_data(
+    'data/eta-right-click-settings.svg',
+    install_dir: get_option('prefix') / 'share/icons/hicolor/scalable/apps'
+)
+
+install_data(
     'data/eta-right-click.systemd',
     install_dir: '/lib/systemd/system',
     rename: 'eta-right-click.service'
