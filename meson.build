@@ -3,6 +3,8 @@ project('eta-right-click', 'c',
   meson_version: '>= 0.50.0',
 )
 
+subdir('po')
+
 executable(
     'eta-click',
     'src/click.c',

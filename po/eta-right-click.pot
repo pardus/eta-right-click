@@ -1,0 +1,42 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-12 16:59+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/gui/main.py:21
+msgid "ETA Right Click Settings"
+msgstr ""
+
+#: src/gui/main.py:36
+msgid "Timeout (ms):"
+msgstr ""
+
+#: src/gui/main.py:44
+msgid "Threshold (px):"
+msgstr ""
+
+#: src/gui/main.py:55
+msgid "Save"
+msgstr ""
+
+#: src/gui/main.py:59
+msgid "Cancel"
+msgstr ""
+
+#: src/gui/main.py:91
+msgid "Failed to save config"
+msgstr ""
