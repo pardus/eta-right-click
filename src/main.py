@@ -164,11 +164,8 @@ class Device:
         self.saved_events = []
 
     def event_action(self, ev):
-        if ev:
-            print_event(ev)
-        self.ev = ev
-
         if ev and ev.type != e.EV_SYN:
+            print_event(ev)
             self.cur_event.append(ev)
             return False
 
@@ -217,11 +214,10 @@ class Device:
             self.cur_event = []
             return False
 
-        for _ev in self.cur_event:
-            self.ui.write_event(_ev)
-        if ev:
-            self.ui.write_event(ev)
+        self.saved_events.append(self.cur_event)
+        self.do_event()
         self.cur_event = []
+        print("====================")
 
 
     @asynchronous
