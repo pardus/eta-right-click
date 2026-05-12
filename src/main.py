@@ -1,9 +1,11 @@
+
 #!/usr/bin/env python3
 import fcntl, os
 import math
 import time
 from util import *
 import configparser
+import subprocess
 
 import traceback
 import socket
@@ -25,12 +27,19 @@ if "--debug" not in sys.argv:
 timeout   = 500  # uzun basma bekleme süresi
 threshold = 20 # görmezden gelinen minimum pixel
 
+event_hold="right-click"
+event_release=""
+event_tap=""
+
 
 try:
     config = configparser.ConfigParser()
     config.read("/etc/pardus/eta-right-click.conf")
     timeout   = float(config["main"]["timeout"])
     threshold  = float(config["main"]["threshold"])
+    event_hold  = str(config["event"]["hold"])
+    event_release  = str(config["event"]["release"])
+    event_tap  = str(config["event"]["tap"])
 except Exception as err:
     log(err)
 
@@ -76,6 +85,15 @@ class Device:
             log(f"eta-click socket error: {e}")
 
 
+    def do_event_config(self, conf):
+        print(conf)
+        if conf == "ignore":
+            return
+        elif conf == "right-click":
+            self.do_click(e.BTN_RIGHT)
+        elif conf.startswith("exec::"):
+            threading.Thread(target=subprocess.run, args=(["sh", "-c", conf[6:]],)).start()
+
     @asynchronous
     def do_click(self, btn):
         if self.pos[0] < 0 or self.pos[1] < 0:
@@ -92,14 +110,25 @@ class Device:
         self.send_ev(e.EV_KEY, btn, 0)
         self.send_ev(0, 0, 0)
 
+    def release_click_handler(self):
+        print('event::release')
+        self.do_event_config(event_release)
+
     def right_click_handler(self, id):
         if self.id != id:
             return
         if check_disable():
             return
         self.lock = True
-        self.do_click(e.BTN_RIGHT)
-        print('check-click')
+        print('event::hold')
+        self.do_event_config(event_hold)
+
+
+    def tap_handler(self):
+        print("event::tap")
+        self.do_event()
+        self.do_event_config(event_tap)
+
 
     def is_pressed(self, evs):
         for ev in evs:
@@ -179,7 +208,7 @@ class Device:
         if self.is_multi_touch(self.cur_event) or self.num_of_touch > 1:
             self.saved_events.append(self.cur_event)
             self.do_event()
-            self.cur_event = []            
+            self.cur_event = []
             self.id += 1
             return False
         elif self.is_pressed(self.cur_event):
@@ -195,9 +224,10 @@ class Device:
                 self.saved_events = []
                 self.cur_event = []
                 self.lock = False
+                self.release_click_handler()
                 return False
             if distance < threshold:
-                self.do_event()
+                self.tap_handler()
             self.pos_begin = [-1, -1]
             self.id += 1
         elif self.is_move(self.cur_event):
