@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+import os
 import sys
 import configparser
+import subprocess
 
 import gi
 
@@ -76,6 +78,7 @@ class SettingsWindow(Gtk.Window):
         try:
             with open(CONFIG_PATH, "w") as f:
                 config.write(f)
+            self._restart_service()
         except Exception as e:
             dialog = Gtk.MessageDialog(
                 transient_for=self,
@@ -91,8 +94,15 @@ class SettingsWindow(Gtk.Window):
 
         Gtk.main_quit()
 
+    def _restart_service(self):
+        subprocess.run(["systemctl", "restart", "eta-right-click.service"])
+
 
 if __name__ == "__main__":
+
+    if os.getuid() != 0:
+        subprocess.run(["pkexec", __file__])
+        sys.exit(0)
     settings = SettingsWindow()
     settings.show_all()
     Gtk.main()
