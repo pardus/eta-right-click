@@ -118,6 +118,16 @@ class Device:
             if ev.code == e.ABS_MT_POSITION_Y:
                 self.pos[1] = ev.value
 
+    def is_multi_touch(self, evs):
+        count = 0
+        for ev in evs:
+            if (ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID):
+                if ev.value > 0:
+                    count += 1
+                else:
+                    count -= 1
+        return count > 1
+
     def is_released(self, evs):
         for ev in evs:
             if (ev.type == e.EV_KEY and (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH) and ev.value == 0) \
@@ -168,6 +178,11 @@ class Device:
         self.calculate_touch()
 
         if len(self.cur_event) == 0:
+            return False
+        if self.is_multi_touch(self.cur_event):
+            self.saved_events.append(self.cur_event)
+            self.do_event()
+            self.cur_event = []            
             return False
         elif self.is_pressed(self.cur_event):
             self.pos_begin[0] = self.pos[0]
