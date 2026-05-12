@@ -258,6 +258,9 @@ class Device:
         cap[e.EV_KEY] += [e.BTN_RIGHT, e.BTN_LEFT]
         self.ui = UInput(cap, name=f"Amogus device ({self.dev.name})", vendor=0x31, product=0x31)
         self.dev.grab()
+        if event_hold == "ignore" and event_release == "ignore" and event_tap == "ignore":
+            for ev in self.dev.read_loop():
+                self.ui.write_event(ev)
 
         # Bu kısımda eventler okunur
         try:

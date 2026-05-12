@@ -33,6 +33,8 @@ class SettingsWindow(Gtk.Window):
 
         self.timeout = 500
         self.threshold = 20
+        self.hold = "right-click"
+        self.release = "ignore"
         self._load_config()
 
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -57,6 +59,30 @@ class SettingsWindow(Gtk.Window):
         self.threshold_spin.set_value(self.threshold)
         grid.attach(self.threshold_spin, 1, 1, 1, 1)
 
+        event_frame = Gtk.Frame(label=_("Right Click Event"))
+        event_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin=8)
+        event_frame.add(event_vbox)
+        vbox.pack_start(event_frame, False, False, 0)
+
+        self.radio_hold = Gtk.RadioButton.new_with_label_from_widget(None, _("On hold (while pressing)"))
+        event_vbox.pack_start(self.radio_hold, False, False, 0)
+
+        self.radio_release = Gtk.RadioButton.new_from_widget(self.radio_hold)
+        self.radio_release.set_label(_("On release (when lifting finger)"))
+        event_vbox.pack_start(self.radio_release, False, False, 0)
+        
+        
+        self.radio_ignore = Gtk.RadioButton.new_from_widget(self.radio_hold)
+        self.radio_ignore.set_label(_("Disable"))
+        event_vbox.pack_start(self.radio_ignore, False, False, 0)
+
+        if self.hold == "right-click":
+            self.radio_hold.set_active(True)
+        elif self.release == "right-click":
+            self.radio_release.set_active(True)
+        else:
+            self.radio_ignore.set_active(True)
+
         btn_box = Gtk.Box(spacing=8)
         vbox.pack_start(btn_box, False, False, 0)
 
@@ -74,6 +100,8 @@ class SettingsWindow(Gtk.Window):
             config.read(CONFIG_PATH)
             self.timeout = int(config["main"]["timeout"])
             self.threshold = int(config["main"]["threshold"])
+            self.hold = config.get("event", "hold", fallback="right-click")
+            self.release = config.get("event", "release", fallback="ignore")
         except Exception:
             pass
 
@@ -81,10 +109,21 @@ class SettingsWindow(Gtk.Window):
         timeout = int(self.timeout_spin.get_value())
         threshold = int(self.threshold_spin.get_value())
 
+        hold = "ignore"
+        release = "ignore"
+        if self.radio_hold.get_active():
+            hold = "right-click"
+        if self.radio_release.get_active():
+            release = "right-click"
+
         config = configparser.ConfigParser()
         config["main"] = {}
         config["main"]["timeout"] = str(timeout)
         config["main"]["threshold"] = str(threshold)
+        config["event"] = {}
+        config["event"]["hold"] = hold
+        config["event"]["release"] = release
+        config["event"]["tap"] = "ignore"
 
         try:
             with open(CONFIG_PATH, "w") as f:
