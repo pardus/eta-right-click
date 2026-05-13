@@ -6,6 +6,7 @@ from util import *
 import configparser
 import subprocess
 
+import random
 import traceback
 import socket
 import struct
@@ -112,13 +113,14 @@ class Device:
             return
         x = int((3840*self.pos[0]) / self.abs_max[0])
         y = int((2160*self.pos[1]) / self.abs_max[1])
+        delay = random.random()*0.02 + 0.02
         self.send_ev(e.EV_ABS, e.ABS_X, x)
         self.send_ev(e.EV_ABS, e.ABS_Y, y)
         self.send_ev(0, 0, 0)
 
         self.send_ev(e.EV_KEY, btn, 1)
         self.send_ev(0, 0, 0)
-        time.sleep(0.03)
+        time.sleep(delay)
         self.send_ev(e.EV_KEY, btn, 0)
         self.send_ev(0, 0, 0)
 
@@ -139,7 +141,8 @@ class Device:
     def tap_handler(self):
         print("event::tap")
         self.do_event()
-        time.sleep(0.03)
+        delay = random.random()*0.02 + 0.02
+        time.sleep(delay)
         self.do_event_config(event_tap)
 
 
