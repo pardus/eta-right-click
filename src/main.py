@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 import fcntl, os
 import math
@@ -65,6 +64,7 @@ class Device:
 
     def __init__(self, dev):
         self.dev = dev
+        self.ui = None
         self.abs_max = [dev.absinfo(e.ABS_X).max, dev.absinfo(e.ABS_Y).max]
         self.pos_begin = [-1, -1]
         self.pos = [-1,-1]
@@ -73,6 +73,7 @@ class Device:
         self.exit_handler = None
         self.lock = False
         self.num_of_touch = 0
+        self.ev_time = time.time()
         self.id = 0
 
     def send_ev(self, etype, ecode, evalue):
@@ -93,6 +94,17 @@ class Device:
             self.do_click(e.BTN_RIGHT)
         elif conf.startswith("exec::"):
             threading.Thread(target=subprocess.run, args=(["sh", "-c", conf[6:]],)).start()
+
+    def reset_handler(self):
+        cap = self.dev.capabilities()
+        del cap[0]
+        cap[e.EV_KEY] += [e.BTN_RIGHT, e.BTN_LEFT]
+        if self.ui:
+            self.dev.ungrab()
+            self.ui.close()
+            del self.ui
+        self.ui = UInput(cap, name=f"Amogus device ({self.dev.name})", vendor=0x31, product=0x31)
+        self.dev.grab()
 
     @asynchronous
     def do_click(self, btn):
@@ -212,9 +224,10 @@ class Device:
             self.id += 1
             return False
         elif self.is_pressed(self.cur_event):
+            print("press", self.pos, self.pos_begin, self.num_of_touch)
             self.pos_begin[0] = self.pos[0]
             self.pos_begin[1] = self.pos[1]
-            print("press", self.pos, self.pos_begin, self.num_of_touch)
+            self.ev_time = time.time()
             self.saved_events.append(self.cur_event)
             self.id += 1
             GLib.timeout_add(timeout, self.right_click_handler, self.id)
@@ -225,6 +238,9 @@ class Device:
                 self.cur_event = []
                 self.lock = False
                 self.release_click_handler()
+                if time.time() - self.ev_time > 10:
+                    print("reset")
+                    self.reset_handler()
                 return False
             if distance < threshold:
                 self.tap_handler()
@@ -253,11 +269,7 @@ class Device:
 
     @asynchronous
     def listen(self):
-        cap = self.dev.capabilities()
-        del cap[0]
-        cap[e.EV_KEY] += [e.BTN_RIGHT, e.BTN_LEFT]
-        self.ui = UInput(cap, name=f"Amogus device ({self.dev.name})", vendor=0x31, product=0x31)
-        self.dev.grab()
+        self.reset_handler()
         if event_hold == "ignore" and event_release == "ignore" and event_tap == "ignore":
             for ev in self.dev.read_loop():
                 self.ui.write_event(ev)
