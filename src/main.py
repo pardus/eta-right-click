@@ -139,6 +139,7 @@ class Device:
     def tap_handler(self):
         print("event::tap")
         self.do_event()
+        time.sleep(0.03)
         self.do_event_config(event_tap)
 
 
