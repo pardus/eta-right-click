@@ -165,13 +165,17 @@ class Device:
 
     def is_multi_touch(self, evs):
         count = 0
+        slot_detect = False
         for ev in evs:
+            if (ev.type == e.EV_ABS and ev.code == e.ABS_MT_SLOT):
+                slot_detect = True
+                break
             if (ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID):
                 if ev.value > 0:
                     count += 1
                 else:
                     count -= 1
-        return count > 1
+        return count > 1 or slot_detect
 
     def is_released(self, evs):
         for ev in evs:
