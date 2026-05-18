@@ -70,8 +70,7 @@ class SettingsWindow(Gtk.Window):
         self.radio_release = Gtk.RadioButton.new_from_widget(self.radio_hold)
         self.radio_release.set_label(_("On release (when lifting finger)"))
         event_vbox.pack_start(self.radio_release, False, False, 0)
-        
-        
+
         self.radio_ignore = Gtk.RadioButton.new_from_widget(self.radio_hold)
         self.radio_ignore.set_label(_("Disable"))
         event_vbox.pack_start(self.radio_ignore, False, False, 0)
@@ -93,6 +92,10 @@ class SettingsWindow(Gtk.Window):
         cancel_btn = Gtk.Button(label=_("Cancel"))
         cancel_btn.connect("clicked", lambda _: Gtk.main_quit())
         btn_box.pack_end(cancel_btn, False, False, 0)
+
+        reset_btn = Gtk.Button(label=_("Reset"))
+        reset_btn.connect("clicked", self._on_reset)
+        btn_box.pack_end(reset_btn, False, False, 0)
 
     def _load_config(self):
         config = configparser.ConfigParser()
@@ -143,6 +146,11 @@ class SettingsWindow(Gtk.Window):
             return
 
         Gtk.main_quit()
+
+    def _on_reset(self, _btn):
+        self.timeout_spin.set_value(500)
+        self.threshold_spin.set_value(20)
+        self.radio_hold.set_active(True)
 
     def _restart_service(self):
         subprocess.run(["systemctl", "restart", "eta-right-click.service"])

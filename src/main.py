@@ -278,24 +278,25 @@ class Device:
     @asynchronous
     def listen(self):
         self.reset_handler()
-        if event_hold == "ignore" and event_release == "ignore" and event_tap == "ignore":
-            for ev in self.dev.read_loop():
-                self.ui.write_event(ev)
 
         # Bu kısımda eventler okunur
         try:
-            ev_old = None
-            for ev in self.dev.read_loop():
-                # üst üste 2 kere syn gelmemesi için
-                if ev_old == e.EV_SYN and ev.type == e.EV_SYN:
-                    continue
-                ev_old = ev.type
-                if ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID:
-                    self.event_action(None)
-                if ev.type in [e.EV_MSC]:
+            if event_hold == "ignore" and event_release == "ignore" and event_tap == "ignore":
+                for ev in self.dev.read_loop():
                     self.ui.write_event(ev)
-                elif self.event_action(ev):
-                    pass
+            else:
+                ev_old = None
+                for ev in self.dev.read_loop():
+                    # üst üste 2 kere syn gelmemesi için
+                    if ev_old == e.EV_SYN and ev.type == e.EV_SYN:
+                        continue
+                    ev_old = ev.type
+                    if ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID:
+                        self.event_action(None)
+                    if ev.type in [e.EV_MSC]:
+                        self.ui.write_event(ev)
+                    elif self.event_action(ev):
+                        pass
         except:
             print("Device event read failed {}".format(traceback.format_exc()))
             self.ui.close()

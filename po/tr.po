@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-12 20:23+0300\n"
+"POT-Creation-Date: 2026-05-18 13:21+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -40,18 +40,22 @@ msgstr "Beklemede (basılıyken)"
 msgid "On release (when lifting finger)"
 msgstr "Bırakıldığında (parmağı kaldırdığınızda)"
 
-#: src/gui/main.py:76
+#: src/gui/main.py:75
 msgid "Disable"
 msgstr "Devre dışı"
 
-#: src/gui/main.py:89
+#: src/gui/main.py:88
 msgid "Save"
 msgstr "Kaydet"
 
-#: src/gui/main.py:93
+#: src/gui/main.py:92
 msgid "Cancel"
 msgstr "İptal"
 
-#: src/gui/main.py:138
+#: src/gui/main.py:96
+msgid "Reset"
+msgstr "Sıfırla"
+
+#: src/gui/main.py:141
 msgid "Failed to save config"
 msgstr "Yapılandırma kaydedilemedi"
