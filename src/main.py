@@ -104,7 +104,7 @@ class Device:
             self.dev.ungrab()
             self.ui.close()
             del self.ui
-        self.ui = UInput(cap, name=f"Amogus device ({self.dev.name})", vendor=0x31, product=0x31)
+        self.ui = UInput(cap, name=f"Amogus device ({self.dev.name})", phys="", vendor=0x31, product=0x31)
         self.dev.grab()
 
     @asynchronous
@@ -298,6 +298,8 @@ class Device:
                     pass
         except:
             print("Device event read failed {}".format(traceback.format_exc()))
+            self.ui.close()
+            del self.ui
             if self.exit_handler:
                 GLib.idle_add(self.exit_handler, self)
 
