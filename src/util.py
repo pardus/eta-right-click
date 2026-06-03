@@ -14,4 +14,3 @@ def idle(func):
     def wrapper(*args, **kwargs):
         GLib.idle_add(func, *args, **kwargs)
     return wrapper
-

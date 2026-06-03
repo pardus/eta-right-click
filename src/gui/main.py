@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
+import locale
 import os
 import sys
 import configparser
 import subprocess
+from locale import gettext as _
 
 import gi
 
-
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk
 
 CONFIG_PATH = "/etc/pardus/eta-right-click.conf"
-
-import locale
-from locale import gettext as _
 
 # Translation Constants:
 APPNAME = "eta-right-click"
@@ -64,7 +62,9 @@ class SettingsWindow(Gtk.Window):
         event_frame.add(event_vbox)
         vbox.pack_start(event_frame, False, False, 0)
 
-        self.radio_hold = Gtk.RadioButton.new_with_label_from_widget(None, _("On hold (while pressing)"))
+        self.radio_hold = Gtk.RadioButton.new_with_label_from_widget(
+            None, _("On hold (while pressing)")
+        )
         event_vbox.pack_start(self.radio_hold, False, False, 0)
 
         self.radio_release = Gtk.RadioButton.new_from_widget(self.radio_hold)
@@ -129,7 +129,7 @@ class SettingsWindow(Gtk.Window):
         config["event"]["tap"] = "ignore"
 
         try:
-            with open(CONFIG_PATH, "w") as f:
+            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
                 config.write(f)
             self._restart_service()
         except Exception as e:
@@ -153,13 +153,13 @@ class SettingsWindow(Gtk.Window):
         self.radio_hold.set_active(True)
 
     def _restart_service(self):
-        subprocess.run(["systemctl", "restart", "eta-right-click.service"])
+        subprocess.run(["systemctl", "restart", "eta-right-click.service"], check=False)
 
 
 if __name__ == "__main__":
 
     if os.getuid() != 0:
-        subprocess.run(["pkexec", __file__])
+        subprocess.run(["pkexec", __file__], check=False)
         sys.exit(0)
     settings = SettingsWindow()
     settings.show_all()

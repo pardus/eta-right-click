@@ -1,6 +1,5 @@
 import os
 import socket
-import json
 
 class NetlinkSocket(socket.socket):
     def __init__(self):

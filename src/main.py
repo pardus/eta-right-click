@@ -1,47 +1,47 @@
 #!/usr/bin/env python3
-import fcntl, os
-import math
-import time
-from util import *
 import configparser
-import subprocess
-
+import math
+import os
 import random
-import traceback
 import socket
 import struct
+import subprocess
+import sys
 import threading
+import time
+import traceback
 
 from gi.repository import GLib
-from evdev import UInput, InputDevice, AbsInfo, ecodes as e
+from evdev import UInput, InputDevice, ecodes as e
 from evdev.evtest import print_event
 
 from netlink import NetlinkSocket
-import sys
+from util import asynchronous
 
-log=print
 if "--debug" not in sys.argv:
-    def print(*args, **kwargs):
+    def debug_log(*_args, **_kwargs):
         pass
+else:
+    debug_log = print
 
-timeout   = 500  # uzun basma bekleme süresi
-threshold = 20 # görmezden gelinen minimum pixel
+TIMEOUT = 500
+THRESHOLD = 20
 
-event_hold="right-click"
-event_release=""
-event_tap=""
+EVENT_HOLD = "right-click"
+EVENT_RELEASE = ""
+EVENT_TAP = ""
 
 
 try:
     config = configparser.ConfigParser()
     config.read("/etc/pardus/eta-right-click.conf")
-    timeout   = float(config["main"]["timeout"])
-    threshold  = float(config["main"]["threshold"])
-    event_hold  = str(config["event"]["hold"])
-    event_release  = str(config["event"]["release"])
-    event_tap  = str(config["event"]["tap"])
+    TIMEOUT = float(config["main"]["timeout"])
+    THRESHOLD = float(config["main"]["threshold"])
+    EVENT_HOLD = str(config["event"]["hold"])
+    EVENT_RELEASE = str(config["event"]["release"])
+    EVENT_TAP = str(config["event"]["tap"])
 except Exception as err:
-    log(err)
+    debug_log(err)
 
 
 runtime_dir = "/run/etap/right-click"
@@ -66,16 +66,17 @@ class Device:
     def __init__(self, dev):
         self.dev = dev
         self.ui = None
+        self.fd_path = None
         self.abs_max = [dev.absinfo(e.ABS_X).max, dev.absinfo(e.ABS_Y).max]
         self.pos_begin = [-1, -1]
-        self.pos = [-1,-1]
+        self.pos = [-1, -1]
         self.cur_event = []
         self.saved_events = []
         self.exit_handler = None
         self.lock = False
         self.num_of_touch = 0
         self.ev_time = time.time()
-        self.id = 0
+        self.event_id = 0
 
     def send_ev(self, etype, ecode, evalue):
         try:
@@ -83,15 +84,15 @@ class Device:
             sock.connect("/run/eta-click.sock")
             sock.sendall(struct.pack('iii', etype, ecode, evalue))
             sock.close()
-        except Exception as e:
-            log(f"eta-click socket error: {e}")
+        except Exception as exc:
+            debug_log(f"eta-click socket error: {exc}")
 
 
     def do_event_config(self, conf):
-        print(conf)
+        debug_log(conf)
         if conf == "ignore":
             return
-        elif conf == "right-click":
+        if conf == "right-click":
             self.do_click(e.BTN_RIGHT)
         elif conf.startswith("exec::"):
             threading.Thread(target=subprocess.run, args=(["sh", "-c", conf[6:]],)).start()
@@ -104,7 +105,13 @@ class Device:
             self.dev.ungrab()
             self.ui.close()
             del self.ui
-        self.ui = UInput(cap, name=f"Amogus device ({self.dev.name})", phys="", vendor=0x31, product=0x31)
+        self.ui = UInput(
+            cap,
+            name=f"Amogus device ({self.dev.name})",
+            phys="",
+            vendor=0x31,
+            product=0x31,
+        )
         self.dev.grab()
 
     @asynchronous
@@ -125,37 +132,38 @@ class Device:
         self.send_ev(0, 0, 0)
 
     def release_click_handler(self):
-        print('event::release')
-        self.do_event_config(event_release)
+        debug_log('event::release')
+        self.do_event_config(EVENT_RELEASE)
 
-    def right_click_handler(self, id):
-        if self.id != id:
+    def right_click_handler(self, eid):
+        if self.event_id != eid:
             return
         if check_disable():
             return
         self.lock = True
-        print('event::hold')
-        self.do_event_config(event_hold)
+        debug_log('event::hold')
+        self.do_event_config(EVENT_HOLD)
 
 
     def tap_handler(self):
-        print("event::tap")
+        debug_log("event::tap")
         self.do_event()
-        delay = random.random()*0.02 + 0.02
+        delay = random.random() * 0.02 + 0.02
         time.sleep(delay)
-        self.do_event_config(event_tap)
+        self.do_event_config(EVENT_TAP)
 
 
     def is_pressed(self, evs):
         for ev in evs:
-            if (ev.type == e.EV_KEY and (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH) and ev.value == 1) \
-                or (ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID and ev.value != -1):
+            if ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID and ev.value != -1:
+                return True
+            if ev.type == e.EV_KEY and ev.value == 1 and ev.code in (e.BTN_LEFT, e.BTN_TOUCH):
                 return True
         return False
 
     def get_event_pos(self):
         for ev in self.cur_event:
-            if (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH):
+            if ev.code in (e.BTN_LEFT, e.BTN_TOUCH):
                 self.pos[0] = self.dev.absinfo(e.ABS_X).value
                 self.pos[1] = self.dev.absinfo(e.ABS_Y).value
             if ev.code == e.ABS_MT_POSITION_X:
@@ -179,16 +187,18 @@ class Device:
 
     def is_released(self, evs):
         for ev in evs:
-            if (ev.type == e.EV_KEY and (ev.code == e.BTN_LEFT or ev.code == e.BTN_TOUCH) and ev.value == 0) \
-                    or (ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID and ev.value == -1):
+            if ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID and ev.value == -1:
+                return True
+            if ev.type == e.EV_KEY and ev.value == 0 and ev.code in (e.BTN_LEFT, e.BTN_TOUCH):
                 return True
         return False
 
     def is_move(self, evs):
         for ev in evs:
-            if ev.type == e.EV_ABS and (ev.code == e.ABS_X or ev.code == e.ABS_Y \
-                or ev.code == e.ABS_MT_POSITION_X or ev.code == e.ABS_MT_POSITION_Y):
-                    return True
+            if ev.type == e.EV_ABS and ev.code in (
+                e.ABS_X, e.ABS_Y, e.ABS_MT_POSITION_X, e.ABS_MT_POSITION_Y,
+            ):
+                return True
         return False
 
 
@@ -229,40 +239,40 @@ class Device:
             self.saved_events.append(self.cur_event)
             self.do_event()
             self.cur_event = []
-            self.id += 1
+            self.event_id += 1
             return False
-        elif self.is_pressed(self.cur_event):
-            print("press", self.pos, self.pos_begin, self.num_of_touch)
+        if self.is_pressed(self.cur_event):
+            debug_log("press", self.pos, self.pos_begin, self.num_of_touch)
             self.pos_begin[0] = self.pos[0]
             self.pos_begin[1] = self.pos[1]
             self.ev_time = time.time()
             self.saved_events.append(self.cur_event)
-            self.id += 1
-            GLib.timeout_add(timeout, self.right_click_handler, self.id)
+            self.event_id += 1
+            GLib.timeout_add(TIMEOUT, self.right_click_handler, self.event_id)
         elif self.is_released(self.cur_event):
-            print("release", self.pos, self.pos_begin, distance, self.num_of_touch)
+            debug_log("release", self.pos, self.pos_begin, distance, self.num_of_touch)
             if self.lock:
                 self.saved_events = []
                 self.cur_event = []
                 self.lock = False
                 self.release_click_handler()
                 if time.time() - self.ev_time > 10:
-                    print("reset")
+                    debug_log("reset")
                     self.reset_handler()
                 return False
-            if distance < threshold:
+            if distance < THRESHOLD:
                 self.tap_handler()
             self.pos_begin = [-1, -1]
-            self.id += 1
+            self.event_id += 1
         elif self.is_move(self.cur_event):
-            print("move", self.pos, self.pos_begin, distance, self.num_of_touch)
-            if distance > threshold:
-                self.id += 1
+            debug_log("move", self.pos, self.pos_begin, distance, self.num_of_touch)
+            if distance > THRESHOLD:
+                self.event_id += 1
                 self.do_event()
             else:
                 self.saved_events.append(self.cur_event)
         else:
-            print("other", self.pos, self.pos_begin)
+            debug_log("other", self.pos, self.pos_begin)
 
 
         if len(self.saved_events) > 0:
@@ -272,22 +282,20 @@ class Device:
         self.saved_events.append(self.cur_event)
         self.do_event()
         self.cur_event = []
-        print("====================")
+        debug_log("====================")
 
 
     @asynchronous
     def listen(self):
         self.reset_handler()
 
-        # Bu kısımda eventler okunur
         try:
-            if event_hold == "ignore" and event_release == "ignore" and event_tap == "ignore":
+            if EVENT_HOLD == "ignore" and EVENT_RELEASE == "ignore" and EVENT_TAP == "ignore":
                 for ev in self.dev.read_loop():
                     self.ui.write_event(ev)
             else:
                 ev_old = None
                 for ev in self.dev.read_loop():
-                    # üst üste 2 kere syn gelmemesi için
                     if ev_old == e.EV_SYN and ev.type == e.EV_SYN:
                         continue
                     ev_old = ev.type
@@ -297,8 +305,8 @@ class Device:
                         self.ui.write_event(ev)
                     elif self.event_action(ev):
                         pass
-        except:
-            print("Device event read failed {}".format(traceback.format_exc()))
+        except Exception:
+            debug_log(f"Device event read failed {traceback.format_exc()}")
             self.ui.close()
             del self.ui
             if self.exit_handler:
@@ -307,34 +315,37 @@ class Device:
 
 devices = []
 
-def exit_handler(d):
-    if d.fd_path in devices:
-        devices.remove(d.fd_path)
-    print("Device removed {}".format(d.fd_path))
-    del(d)
+def exit_handler(dev):
+    if dev.fd_path in devices:
+        devices.remove(dev.fd_path)
+    debug_log(f"Device removed {dev.fd_path}")
+    del dev
 
-def check_device(f):
-    # event olmayanları es geç
-    if not f.startswith("event"):
+def check_device(name):
+    if not name.startswith("event"):
         return
-    fd = "/dev/input/" +f
+    fd = "/dev/input/" + name
     if fd in devices:
         return
-    print("Available:", f)
+    debug_log("Available:", name)
     devices.append(fd)
-    # device classı oluştur ve ekle
     dev = InputDevice(fd)
     cap = dev.capabilities()
     if "Amogus" in dev.name:
         return
-    # burda uygun olup olmama kontrolü yapılır
-    if (e.EV_KEY in cap and e.BTN_TOUCH in cap[e.EV_KEY]) \
-        or (e.EV_ABS in cap and (e.ABS_X in cap[e.EV_ABS] or e.ABS_MT_POSITION_X in cap[e.EV_ABS])):
-        if e.BTN_TOOL_FINGER in cap[e.EV_KEY] or \
-           e.BTN_TOOL_DOUBLETAP in cap[e.EV_KEY] or \
-           e.BTN_TOOL_TRIPLETAP in cap[e.EV_KEY]:
+    touch_key = e.EV_KEY in cap and e.BTN_TOUCH in cap[e.EV_KEY]
+    touch_abs = (
+        e.EV_ABS in cap
+        and (e.ABS_X in cap[e.EV_ABS] or e.ABS_MT_POSITION_X in cap[e.EV_ABS])
+    )
+    if touch_key or touch_abs:
+        if (
+            e.BTN_TOOL_FINGER in cap[e.EV_KEY]
+            or e.BTN_TOOL_DOUBLETAP in cap[e.EV_KEY]
+            or e.BTN_TOOL_TRIPLETAP in cap[e.EV_KEY]
+        ):
             return
-        print("Track:", f, dev.name)
+        debug_log("Track:", name, dev.name)
         d = Device(dev)
         d.fd_path = fd
         d.exit_handler = exit_handler
@@ -350,8 +361,8 @@ def nls_action(event):
         return
 
     check_device(event["DEVNAME"].split("/")[-1])
-    print("====")
-    print(event)
+    debug_log("====")
+    debug_log(event)
 
 def scan_devices():
     # Device listesi oluşturmak için dizini taradık

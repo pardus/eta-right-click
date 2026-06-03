@@ -1,6 +1,9 @@
-from evdev import ecodes as e
 import struct
 import socket
+
+from evdev import ecodes as e
+
+
 
 def send_ev(etype, ecode, evalue):
     try:
@@ -8,8 +11,8 @@ def send_ev(etype, ecode, evalue):
         sock.connect("/run/eta-click.sock")
         sock.sendall(struct.pack('iii', etype, ecode, evalue))
         sock.close()
-    except Exception as e:
-        print(f"eta-click socket error: {e}")
+    except Exception as exc:
+        print(f"eta-click socket error: {exc}")
 
 """
 EV_ABS ABS_X 0
@@ -20,11 +23,12 @@ EV_SYN SYN_REPORT 0
 EV_KEY BTN_RIGHT 0
 EV_SYN SYN_REPORT 0
 """
+
 if __name__ == "__main__":
     while True:
         try:
             line = input().strip().split(" ")
             print(line)
             send_ev(e.ecodes[line[0]], e.ecodes[line[1]], int(line[2]))
-        except:
+        except (EOFError, KeyboardInterrupt):
             break
