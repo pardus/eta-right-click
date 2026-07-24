@@ -4,13 +4,12 @@ import socket
 from evdev import ecodes as e
 
 
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+sock.connect("/run/eta-click.sock")
 
 def send_ev(etype, ecode, evalue):
     try:
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.connect("/run/eta-click.sock")
         sock.sendall(struct.pack('iii', etype, ecode, evalue))
-        sock.close()
     except Exception as exc:
         print(f"eta-click socket error: {exc}")
 

@@ -13,7 +13,6 @@ import traceback
 
 from gi.repository import GLib
 from evdev import UInput, InputDevice, ecodes as e
-from evdev.evtest import print_event
 
 from netlink import NetlinkSocket
 from util import asynchronous
@@ -21,7 +20,10 @@ from util import asynchronous
 if "--debug" not in sys.argv:
     def debug_log(*_args, **_kwargs):
         pass
+    def print_event(*_args, **_kwargs):
+        pass
 else:
+    from evdev.evtest import print_event
     debug_log = print
 
 TIMEOUT = 500
@@ -77,13 +79,12 @@ class Device:
         self.num_of_touch = 0
         self.ev_time = time.time()
         self.event_id = 0
+        self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.socket.connect("/run/eta-click.sock")
 
     def send_ev(self, etype, ecode, evalue):
         try:
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            sock.connect("/run/eta-click.sock")
-            sock.sendall(struct.pack('iii', etype, ecode, evalue))
-            sock.close()
+            self.socket.sendall(struct.pack('iii', etype, ecode, evalue))
         except Exception as exc:
             debug_log(f"eta-click socket error: {exc}")
 
