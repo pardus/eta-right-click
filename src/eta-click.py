@@ -1,4 +1,5 @@
 import sys
+import time
 
 from util import send_ev
 
@@ -21,13 +22,14 @@ if len(sys.argv) > 2:
         if sys.argv[i] == "click":
             send_ev("EV_KEY", sys.argv[i+1], 1)
             send_ev("EV_SYN", "SYN_REPORT", 0)
+            time.sleep(0.02)
             send_ev("EV_KEY", sys.argv[i+1], 0)
             send_ev("EV_SYN", "SYN_REPORT", 0)
             i += 2
             continue
         if sys.argv[i] == "move":
             send_ev("EV_ABS", "ABS_X", int(sys.argv[i+1]))
-            send_ev("EV_ABS", "ABS_Y", int(sys.argv[i+1]))
+            send_ev("EV_ABS", "ABS_Y", int(sys.argv[i+2]))
             send_ev("EV_SYN", "SYN_REPORT", 0)
             i += 3
             continue
