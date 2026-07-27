@@ -15,7 +15,7 @@ from gi.repository import GLib
 from evdev import UInput, InputDevice, ecodes as e
 
 from netlink import NetlinkSocket
-from util import asynchronous
+from util import asynchronous, send_ev
 
 if "--debug" not in sys.argv:
     def debug_log(*_args, **_kwargs):
@@ -79,15 +79,6 @@ class Device:
         self.num_of_touch = 0
         self.ev_time = time.time()
         self.event_id = 0
-        self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.socket.connect("/run/eta-click.sock")
-
-    def send_ev(self, etype, ecode, evalue):
-        try:
-            self.socket.sendall(struct.pack('iii', etype, ecode, evalue))
-        except Exception as exc:
-            debug_log(f"eta-click socket error: {exc}")
-
 
     def do_event_config(self, conf):
         debug_log(conf)
@@ -122,15 +113,15 @@ class Device:
         x = int((3840*self.pos[0]) / self.abs_max[0])
         y = int((2160*self.pos[1]) / self.abs_max[1])
         delay = random.random()*0.02 + 0.02
-        self.send_ev(e.EV_ABS, e.ABS_X, x)
-        self.send_ev(e.EV_ABS, e.ABS_Y, y)
-        self.send_ev(0, 0, 0)
+        send_ev(e.EV_ABS, e.ABS_X, x)
+        send_ev(e.EV_ABS, e.ABS_Y, y)
+        send_ev(0, 0, 0)
 
-        self.send_ev(e.EV_KEY, btn, 1)
-        self.send_ev(0, 0, 0)
+        send_ev(e.EV_KEY, btn, 1)
+        send_ev(0, 0, 0)
         time.sleep(delay)
-        self.send_ev(e.EV_KEY, btn, 0)
-        self.send_ev(0, 0, 0)
+        send_ev(e.EV_KEY, btn, 0)
+        send_ev(0, 0, 0)
 
     def release_click_handler(self):
         debug_log('event::release')
