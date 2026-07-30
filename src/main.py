@@ -30,8 +30,8 @@ TIMEOUT = 500
 THRESHOLD = 20
 
 EVENT_HOLD = "right-click"
-EVENT_RELEASE = ""
-EVENT_TAP = ""
+EVENT_RELEASE = "ignore"
+EVENT_TAP = "ignore"
 
 
 try:
@@ -83,11 +83,14 @@ class Device:
     def do_event_config(self, conf):
         debug_log(conf)
         if conf == "ignore":
-            return
+            return True
         if conf == "right-click":
             self.do_click(e.BTN_RIGHT)
+        elif conf == "left-click":
+            self.do_click(e.BTN_LEFT)
         elif conf.startswith("exec::"):
             threading.Thread(target=subprocess.run, args=(["sh", "-c", conf[6:]],)).start()
+        return False
 
     def reset_handler(self):
         cap = self.dev.capabilities()
@@ -139,10 +142,8 @@ class Device:
 
     def tap_handler(self):
         debug_log("event::tap")
-        self.do_event()
-        delay = random.random() * 0.02 + 0.02
-        time.sleep(delay)
-        self.do_event_config(EVENT_TAP)
+        if self.do_event_config(EVENT_TAP):
+            self.do_event()
 
 
     def is_pressed(self, evs):
