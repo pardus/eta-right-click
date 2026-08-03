@@ -1,3 +1,60 @@
+eta-right-click (3.0.0) unshable; urgency=medium
+
+  [ Ali Riza KESKIN ]
+  * fix shebang
+  * ignore listen touchpad
+  * add event filter
+  * use single uinput device
+  * fix device scan and uinput device renamed
+  * split filter event
+  * add netlink listen uevent for scan devices
+  * remove event filter and add detectors
+  * remove duplicated
+  * event detection fix
+  * calculate position fix
+  * detect move event fix
+  * event filter: - block first touch - move cancel -> restore saved events - tab -> click
+  * fix move detect. add right click handler
+  * add lock mechanism
+  * app click helper. move to meson
+  * fix meson.
+  * do click: async
+  * fix wrong location issue
+  * change default long press time and save move event
+  * handle multiple ABS_MT_TRACKING_ID in single event loop
+  * change event split logic
+  * increase wait time or x11. syn after X axis change
+  * eta-click as service
+  * add thread mutex lock. add service for eta-click
+  * socket connect, send and close
+  * wait time diff for saved events.
+  * Revert "wait time diff for saved events."
+  * add num_of_touch for debug
+  * detect multi touch and ignore
+  * debug print improvement
+  * better multi touch ignore detection
+  * add settings ui
+  * fix gui start issue
+  * add icon
+  * add translation
+  * tap hold release event config added
+  * add right click event selection
+  * 10sec right click lock press reset device
+  * wait 30ms after tap press event.
+  * random delay added 0.04-0.02ms range
+  * detect multi touch fix
+  * fix device remove event exit uinput device issue
+  * add debug clicker
+  * add reset button
+  * fix: socket connection
+  * update: readme
+  * send_ev function improvements.
+  * typo fix
+  * do_event_config improvements
+  * pylint fix
+
+ -- Fatih Altun <fatih.altun@pardus.org.tr>  Mon, 03 Aug 2026 11:33:30 +0300
+
 eta-right-click (2.0.4) unshable; urgency=medium
 
   [ Ali Riza KESKIN ]
