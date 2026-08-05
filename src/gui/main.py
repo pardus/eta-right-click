@@ -33,6 +33,7 @@ class SettingsWindow(Gtk.Window):
         self.threshold = 20
         self.hold = "right-click"
         self.release = "ignore"
+        self.delay = False
         self._load_config()
 
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -82,6 +83,10 @@ class SettingsWindow(Gtk.Window):
         else:
             self.radio_ignore.set_active(True)
 
+        self.delay_btn = Gtk.CheckButton(label=_("Keep Delay"))
+        self.delay_btn.set_active(self.delay)
+        vbox.pack_start(self.delay_btn, False, False, 0)
+
         btn_box = Gtk.Box(spacing=8)
         vbox.pack_start(btn_box, False, False, 0)
 
@@ -105,6 +110,7 @@ class SettingsWindow(Gtk.Window):
             self.threshold = int(config["main"]["threshold"])
             self.hold = config.get("event", "hold", fallback="right-click")
             self.release = config.get("event", "release", fallback="ignore")
+            self.delay = str(config["main"]["delaymode"]).lower() == "true"
         except Exception:
             pass
 
@@ -119,10 +125,13 @@ class SettingsWindow(Gtk.Window):
         if self.radio_release.get_active():
             release = "right-click"
 
+        delay = self.delay_btn.get_active()
+
         config = configparser.ConfigParser()
         config["main"] = {}
         config["main"]["timeout"] = str(timeout)
         config["main"]["threshold"] = str(threshold)
+        config["main"]["delaymode"] = str(delay)
         config["event"] = {}
         config["event"]["hold"] = hold
         config["event"]["release"] = release
@@ -151,6 +160,7 @@ class SettingsWindow(Gtk.Window):
         self.timeout_spin.set_value(500)
         self.threshold_spin.set_value(20)
         self.radio_hold.set_active(True)
+        self.delay_btn.set_active(False)
 
     def _restart_service(self):
         subprocess.run(["systemctl", "restart", "eta-right-click.service"], check=False)

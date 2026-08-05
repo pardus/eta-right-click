@@ -32,12 +32,13 @@ THRESHOLD = 20
 EVENT_HOLD = "right-click"
 EVENT_RELEASE = "ignore"
 EVENT_TAP = "ignore"
-
+DELAY_MODE = False
 
 try:
     config = configparser.ConfigParser()
     config.read("/etc/pardus/eta-right-click.conf")
     TIMEOUT = float(config["main"]["timeout"])
+    DELAY_MODE = str(config["main"]["delaymode"]).lower() == "true"
     THRESHOLD = float(config["main"]["threshold"])
     EVENT_HOLD = str(config["event"]["hold"])
     EVENT_RELEASE = str(config["event"]["release"])
@@ -211,9 +212,10 @@ class Device:
     def do_event(self, name=''):
         t = 0
         for _evs, _time in self.saved_events:
-            if t > 0:
-                time.sleep(_time - t)
-            t = _time
+            if DELAY_MODE:
+                if t > 0:
+                    time.sleep(_time - t)
+                t = _time
             for _ev in _evs:
                 self.ui.write_event(_ev)
             self.ui.syn()

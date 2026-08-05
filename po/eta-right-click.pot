@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-18 13:21+0300\n"
+"POT-Creation-Date: 2026-08-05 18:35+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,19 +17,19 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/gui/main.py:29
+#: src/gui/main.py:27
 msgid "ETA Right Click Settings"
 msgstr ""
 
-#: src/gui/main.py:46
+#: src/gui/main.py:45
 msgid "Timeout (ms):"
 msgstr ""
 
-#: src/gui/main.py:54
+#: src/gui/main.py:53
 msgid "Threshold (px):"
 msgstr ""
 
-#: src/gui/main.py:62
+#: src/gui/main.py:61
 msgid "Right Click Event"
 msgstr ""
 
@@ -37,26 +37,30 @@ msgstr ""
 msgid "On hold (while pressing)"
 msgstr ""
 
-#: src/gui/main.py:71
+#: src/gui/main.py:72
 msgid "On release (when lifting finger)"
 msgstr ""
 
-#: src/gui/main.py:75
+#: src/gui/main.py:76
 msgid "Disable"
 msgstr ""
 
-#: src/gui/main.py:88
+#: src/gui/main.py:86
+msgid "Keep Delay"
+msgstr ""
+
+#: src/gui/main.py:93
 msgid "Save"
 msgstr ""
 
-#: src/gui/main.py:92
+#: src/gui/main.py:97
 msgid "Cancel"
 msgstr ""
 
-#: src/gui/main.py:96
+#: src/gui/main.py:101
 msgid "Reset"
 msgstr ""
 
-#: src/gui/main.py:141
+#: src/gui/main.py:150
 msgid "Failed to save config"
 msgstr ""
