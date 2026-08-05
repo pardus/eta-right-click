@@ -143,7 +143,7 @@ class Device:
     def tap_handler(self):
         debug_log("event::tap")
         if self.do_event_config(EVENT_TAP):
-            self.do_event()
+            self.do_event('tap')
 
 
     def is_pressed(self, evs):
@@ -208,8 +208,12 @@ class Device:
         elif self.is_released(self.cur_event):
             self.num_of_touch -= 1
 
-    def do_event(self):
-        for _evs in self.saved_events:
+    def do_event(self, name=''):
+        t = 0
+        for _evs, _time in self.saved_events:
+            if t > 0:
+                time.sleep(_time - t)
+            t = _time
             for _ev in _evs:
                 self.ui.write_event(_ev)
             self.ui.syn()
@@ -229,8 +233,8 @@ class Device:
         if len(self.cur_event) == 0:
             return False
         if self.is_multi_touch(self.cur_event) or self.num_of_touch > 1:
-            self.saved_events.append(self.cur_event)
-            self.do_event()
+            self.saved_events.append((self.cur_event, time.time()))
+            self.do_event('multi-touch')
             self.cur_event = []
             self.event_id += 1
             return False
@@ -239,7 +243,7 @@ class Device:
             self.pos_begin[0] = self.pos[0]
             self.pos_begin[1] = self.pos[1]
             self.ev_time = time.time()
-            self.saved_events.append(self.cur_event)
+            self.saved_events.append((self.cur_event, time.time()))
             self.event_id += 1
             GLib.timeout_add(TIMEOUT, self.right_click_handler, self.event_id)
         elif self.is_released(self.cur_event):
@@ -254,6 +258,7 @@ class Device:
                     self.reset_handler()
                 return False
             if distance < THRESHOLD:
+                self.saved_events.append((self.cur_event, time.time()))
                 self.tap_handler()
             self.pos_begin = [-1, -1]
             self.event_id += 1
@@ -261,9 +266,9 @@ class Device:
             debug_log("move", self.pos, self.pos_begin, distance, self.num_of_touch)
             if distance > THRESHOLD:
                 self.event_id += 1
-                self.do_event()
+                self.do_event('move')
             else:
-                self.saved_events.append(self.cur_event)
+                self.saved_events.append((self.cur_event, time.time()))
         else:
             debug_log("other", self.pos, self.pos_begin)
 
@@ -272,8 +277,8 @@ class Device:
             self.cur_event = []
             return False
 
-        self.saved_events.append(self.cur_event)
-        self.do_event()
+        self.saved_events.append((self.cur_event, time.time()))
+        self.do_event('other')
         self.cur_event = []
         debug_log("====================")
 
