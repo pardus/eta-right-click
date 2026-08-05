@@ -1,4 +1,4 @@
-// uinput_abs_mouse.c
+// eta-click.c - UInput virtual device daemon for eta-right-click
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
@@ -23,11 +23,39 @@ struct event {
 };
 
 static int uinput_fd = -1;
+static int server_fd = -1;
+static volatile sig_atomic_t running = 1;
 static pthread_mutex_t click_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static void signal_handler(int sig) {
+    (void)sig;
+    running = 0;
+}
+
+static void cleanup(void) {
+    if (uinput_fd >= 0) {
+        ioctl(uinput_fd, UI_DEV_DESTROY);
+        close(uinput_fd);
+    }
+    if (server_fd >= 0) {
+        close(server_fd);
+    }
+    unlink(SOCKET_PATH);
+}
 
 
 static int setup_uinput(int fd) {
     struct uinput_user_dev udev;
+    int abs_max_x = 3840;
+    int abs_max_y = 2160;
+
+    char *env_x = getenv("ETA_CLICK_RES_X");
+    char *env_y = getenv("ETA_CLICK_RES_Y");
+    if (env_x) abs_max_x = atoi(env_x);
+    if (env_y) abs_max_y = atoi(env_y);
+
+    if (abs_max_x <= 0) abs_max_x = 3840;
+    if (abs_max_y <= 0) abs_max_y = 2160;
 
     // relative mouse
     if (ioctl(fd, UI_SET_EVBIT, EV_REL) < 0) return -1;
@@ -54,9 +82,9 @@ static int setup_uinput(int fd) {
     udev.id.vendor  = 0x1923;
     udev.id.product = 0x1299;
     udev.absmin[ABS_X] = 0;
-    udev.absmax[ABS_X] = 3840;
+    udev.absmax[ABS_X] = abs_max_x;
     udev.absmin[ABS_Y] = 0;
-    udev.absmax[ABS_Y] = 2160;
+    udev.absmax[ABS_Y] = abs_max_y;
 
     if (write(fd, &udev, sizeof(udev)) < 0) return -1;
     if (ioctl(fd, UI_DEV_CREATE) < 0) return -1;
@@ -108,7 +136,7 @@ static int setup_socket(void) {
         close(fd);
         return -1;
     }
-    chmod(SOCKET_PATH, 0666);
+    chmod(SOCKET_PATH, 0660);
 
     if (listen(fd, 5) < 0) {
         perror("listen");
@@ -119,8 +147,12 @@ static int setup_socket(void) {
 }
 
 int main(int argc, char **argv) {
-    int server_fd;
-
+    struct sigaction sa;
+    sa.sa_handler = signal_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
 
     uinput_fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
     if (uinput_fd < 0) {
@@ -142,7 +174,7 @@ int main(int argc, char **argv) {
 
     printf("eta-click: listening on %s\n", SOCKET_PATH);
 
-    while (1) {
+    while (running) {
         struct sockaddr_un client_addr;
         socklen_t client_len = sizeof(client_addr);
         int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
@@ -159,8 +191,7 @@ int main(int argc, char **argv) {
         pthread_attr_destroy(&attr);
     }
 
-    unlink(SOCKET_PATH);
-    close(server_fd);
-    close(uinput_fd);
+    printf("eta-click: shutting down\n");
+    cleanup();
     return 0;
 }
