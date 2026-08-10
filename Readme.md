@@ -55,7 +55,7 @@ python3 src/main.py --debug
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for more details.
+This project is licensed under the Gpl V3 License. See the LICENSE file for more details.
 
 ## Acknowledgments
 
