@@ -33,12 +33,14 @@ EVENT_HOLD = "right-click"
 EVENT_RELEASE = "ignore"
 EVENT_TAP = "ignore"
 DELAY_MODE = False
+EVENT_FILTER = True
 
 try:
     config = configparser.ConfigParser()
     config.read("/etc/pardus/eta-right-click.conf")
     TIMEOUT = float(config["main"]["timeout"])
     DELAY_MODE = str(config["main"]["delaymode"]).lower() == "true"
+    EVENT_FILTER = str(config["main"]["eventfilter"]).lower() == "true"
     THRESHOLD = float(config["main"]["threshold"])
     EVENT_HOLD = str(config["event"]["hold"])
     EVENT_RELEASE = str(config["event"]["release"])
@@ -98,7 +100,8 @@ class Device:
         del cap[0]
         cap[e.EV_KEY] += [e.BTN_RIGHT, e.BTN_LEFT]
         if self.ui:
-            self.dev.ungrab()
+            if EVENT_FILTER:
+                self.dev.ungrab()
             self.ui.close()
             del self.ui
         self.ui = UInput(
@@ -108,7 +111,8 @@ class Device:
             vendor=0x31,
             product=0x31,
         )
-        self.dev.grab()
+        if EVENT_FILTER:
+            self.dev.grab()
 
     @asynchronous
     def do_click(self, btn):
@@ -210,6 +214,8 @@ class Device:
             self.num_of_touch -= 1
 
     def do_event(self, name=''):
+        if not EVENT_FILTER:
+            return
         t = 0
         for _evs, _time in self.saved_events:
             if DELAY_MODE:
@@ -292,7 +298,8 @@ class Device:
         try:
             if EVENT_HOLD == "ignore" and EVENT_RELEASE == "ignore" and EVENT_TAP == "ignore":
                 for ev in self.dev.read_loop():
-                    self.ui.write_event(ev)
+                    if EVENT_FILTER:
+                        self.ui.write_event(ev)
             else:
                 ev_old = None
                 for ev in self.dev.read_loop():
@@ -302,7 +309,8 @@ class Device:
                     if ev.type == e.EV_ABS and ev.code == e.ABS_MT_TRACKING_ID:
                         self.event_action(None)
                     if ev.type in [e.EV_MSC]:
-                        self.ui.write_event(ev)
+                        if EVENT_FILTER:
+                            self.ui.write_event(ev)
                     elif self.event_action(ev):
                         pass
         except Exception:

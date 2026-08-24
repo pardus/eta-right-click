@@ -34,6 +34,7 @@ class SettingsWindow(Gtk.Window):
         self.hold = "right-click"
         self.release = "ignore"
         self.delay = False
+        self.filter = True
         self._load_config()
 
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -87,6 +88,10 @@ class SettingsWindow(Gtk.Window):
         self.delay_btn.set_active(self.delay)
         vbox.pack_start(self.delay_btn, False, False, 0)
 
+        self.filter_btn = Gtk.CheckButton(label=_("Enable Event Filter"))
+        self.filter_btn.set_active(self.filter)
+        vbox.pack_start(self.filter_btn, False, False, 0)
+
         btn_box = Gtk.Box(spacing=8)
         vbox.pack_start(btn_box, False, False, 0)
 
@@ -111,6 +116,7 @@ class SettingsWindow(Gtk.Window):
             self.hold = config.get("event", "hold", fallback="right-click")
             self.release = config.get("event", "release", fallback="ignore")
             self.delay = str(config["main"]["delaymode"]).lower() == "true"
+            self.filter = str(config["main"]["eventfilter"]).lower() == "true"
         except Exception:
             pass
 
@@ -126,12 +132,14 @@ class SettingsWindow(Gtk.Window):
             release = "right-click"
 
         delay = self.delay_btn.get_active()
+        filter = self.filter_btn.get_active()
 
         config = configparser.ConfigParser()
         config["main"] = {}
         config["main"]["timeout"] = str(timeout)
         config["main"]["threshold"] = str(threshold)
         config["main"]["delaymode"] = str(delay)
+        config["main"]["eventfilter"] = str(filter)
         config["event"] = {}
         config["event"]["hold"] = hold
         config["event"]["release"] = release
@@ -161,6 +169,7 @@ class SettingsWindow(Gtk.Window):
         self.threshold_spin.set_value(20)
         self.radio_hold.set_active(True)
         self.delay_btn.set_active(False)
+        self.filter_btn.set_active(True)
 
     def _restart_service(self):
         subprocess.run(["systemctl", "restart", "eta-right-click.service"], check=False)

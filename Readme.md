@@ -17,7 +17,7 @@ Eta Right Click is a utility designed to emulate right-click actions through lon
 
 The script can be configured by editing the `/etc/pardus/eta-right-click.conf` file. The following parameters can be adjusted:
 
-- `timeout`: Sets the duration to wait for a long press before triggering a right-click (default: 500 ms).
+- `timeout`: Sets the duration to wait for a long press before triggering a right-click (default: 700 ms).
 - `threshold`: Defines the minimum movement pixel to ignore touch events (default: 20).
 
 ### Example Configuration File
