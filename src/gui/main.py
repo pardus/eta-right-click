@@ -29,7 +29,7 @@ class SettingsWindow(Gtk.Window):
         self.set_resizable(False)
         self.connect("destroy", Gtk.main_quit)
 
-        self.timeout = 500
+        self.timeout = 700
         self.threshold = 20
         self.hold = "right-click"
         self.release = "ignore"
@@ -165,7 +165,7 @@ class SettingsWindow(Gtk.Window):
         Gtk.main_quit()
 
     def _on_reset(self, _btn):
-        self.timeout_spin.set_value(500)
+        self.timeout_spin.set_value(700)
         self.threshold_spin.set_value(20)
         self.radio_hold.set_active(True)
         self.delay_btn.set_active(False)
