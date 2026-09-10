@@ -1,0 +1,71 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Hugo Carvalho <hugokarvalho@hotmail.com>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-24 13:07+0300\n"
+"PO-Revision-Date: 2026-09-10 16:31+0100\n"
+"Last-Translator: Hugo Carvalho <hugokarvalho@hotmail.com>\n"
+"Language-Team: \n"
+"Language: pt_PT\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.9\n"
+
+#: src/gui/main.py:27
+msgid "ETA Right Click Settings"
+msgstr "Definições do clique com o botão direito ETA"
+
+#: src/gui/main.py:46
+msgid "Timeout (ms):"
+msgstr "Tempo limite (ms):"
+
+#: src/gui/main.py:54
+msgid "Threshold (px):"
+msgstr "Limite (px):"
+
+#: src/gui/main.py:62
+msgid "Right Click Event"
+msgstr "Evento de clique com o botão direito"
+
+#: src/gui/main.py:68
+msgid "On hold (while pressing)"
+msgstr "Em espera (enquanto se mantém premido)"
+
+#: src/gui/main.py:73
+msgid "On release (when lifting finger)"
+msgstr "Ao soltar (ao retirar o dedo)"
+
+#: src/gui/main.py:77
+msgid "Disable"
+msgstr "Desativar"
+
+#: src/gui/main.py:87
+msgid "Keep Delay"
+msgstr "Manter o atraso"
+
+#: src/gui/main.py:91
+msgid "Enable Event Filter"
+msgstr "Ativar filtro de eventos"
+
+#: src/gui/main.py:98
+msgid "Save"
+msgstr "Guardar"
+
+#: src/gui/main.py:102
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: src/gui/main.py:106
+msgid "Reset"
+msgstr "Repor"
+
+#: src/gui/main.py:158
+msgid "Failed to save config"
+msgstr "Falha ao guardar a configuração"
