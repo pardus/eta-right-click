@@ -2,8 +2,10 @@
 [Desktop Entry]
 Type=Application
 Name=ETA Right Click Settings
+Name[pt]=Definições do clique com o botão direito
 Name[tr]=ETA Sağ Tık Ayarları
 Comment=Configure long-press right-click behavior
+Comment[pt]=Configurar o comportamento do clique com o botão direito ao manter premido
 Comment[tr]=Uzun basma sağ tık davranışını yapılandırın
 Exec=/usr/share/eta/eta-right-click/gui/main.py
 Icon=eta-right-click-settings
