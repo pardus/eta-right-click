@@ -169,7 +169,7 @@ class SettingsWindow(Gtk.Window):
         self.threshold_spin.set_value(20)
         self.radio_hold.set_active(True)
         self.delay_btn.set_active(False)
-        self.filter_btn.set_active(True)
+        self.filter_btn.set_active(False)
 
     def _restart_service(self):
         subprocess.run(["systemctl", "restart", "eta-right-click.service"], check=False)
