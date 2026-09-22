@@ -1,3 +1,25 @@
+eta-right-click (3.0.1) unshable; urgency=medium
+
+  [ Voctl ]
+  * eta-click: add graceful shutdown and UInput cleanup
+
+  [ Ali Riza KESKIN ]
+  * save event time and do_event use time diff
+  * add delaymode options
+  * add event filter disable option
+  * update translation
+  * fix update  default timeout
+  * event filter disabled by default
+
+  [ Subhan Gadirli ]
+  * Delete LICENSE
+  * Add GNU General Public License v3
+
+  [ sulincix ]
+  * Update Readme.md
+
+ -- Fatih Altun <fatih.altun@pardus.org.tr>  Tue, 22 Sep 2026 16:54:24 +0300
+
 eta-right-click (3.0.0) unshable; urgency=medium
 
   [ Ali Riza KESKIN ]
