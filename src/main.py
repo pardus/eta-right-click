@@ -336,9 +336,13 @@ def check_device(name):
     if fd in devices:
         return
     debug_log("Available:", name)
-    devices.append(fd)
-    dev = InputDevice(fd)
-    cap = dev.capabilities()
+    try:
+        dev = InputDevice(fd)
+        cap = dev.capabilities()
+    except OSError as err:
+        # Removed again before we could open it, this also runs in the netlink thread
+        debug_log(f"Device open failed {fd}: {err}")
+        return
     if "Amogus" in dev.name:
         return
     touch_key = e.EV_KEY in cap and e.BTN_TOUCH in cap[e.EV_KEY]
@@ -354,6 +358,9 @@ def check_device(name):
         ):
             return
         debug_log("Track:", name, dev.name)
+        # Only tracked devices stay here, a new touch screen can get the event
+        # number of an unplugged keyboard
+        devices.append(fd)
         d = Device(dev)
         d.fd_path = fd
         d.exit_handler = exit_handler
